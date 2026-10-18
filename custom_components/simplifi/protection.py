@@ -161,9 +161,15 @@ class ProtectionReader:
             api = self._source()
             from aiounifi.models.api import ApiRequest, ApiRequestV2
 
+            from .metered_unifi import read
+
             async with asyncio.timeout(15):
-                filters = await api.request(ApiRequestV2(method="get", path="/content-filtering"))
-                networks = await api.request(ApiRequest(method="get", path="/rest/networkconf"))
+                filters = await read(
+                    api, ApiRequestV2(method="get", path="/content-filtering"), self.gateway
+                )
+                networks = await read(
+                    api, ApiRequest(method="get", path="/rest/networkconf"), self.gateway
+                )
             profiles = normalize_profiles(filters, networks, self.gateway.networks)
         except SimpliFiError as error:
             self.error = str(error)

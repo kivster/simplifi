@@ -170,12 +170,53 @@ async def test_http_and_websocket_deny_missing_grants_and_admin_data(entry, tran
     denied = await t.ws("access_status")
     assert not denied["success"]
     await t.grant()
-    for action in ("dashboard_data", "list_access_grants", "access_users", "preview_recovery"):
+    for action in (
+        "dashboard_data",
+        "list_access_grants",
+        "access_users",
+        "preview_recovery",
+        "gateway_health",
+    ):
         code, _ = await t.rest(action)
         assert code == 401
         denied = await t.ws(action)
         assert not denied["success"]
     assert entry.runtime_data.engine.state.revision == before
+
+
+@pytest.mark.parametrize("transport", ["rest", "ws"])
+async def test_gateway_health_requires_admin_and_explicit_refresh_without_changing_intent(
+    entry, transports, monkeypatch, transport
+):
+    from copy import deepcopy
+    from unittest.mock import AsyncMock
+
+    coordinator = entry.runtime_data
+    before = deepcopy(coordinator.engine.state.to_dict())
+    read = AsyncMock(wraps=coordinator.gateway_health.read)
+    monkeypatch.setattr(coordinator.gateway_health, "read", read)
+    await transports.grant("read_only")
+    denied, _ = await transports.call(transport, "gateway_health", "delegate", refresh=True)
+    assert not denied
+    read.assert_not_awaited()
+    success, _ = await transports.call(transport, "gateway_health", "admin")
+    assert success
+    read.assert_not_awaited()
+    success, _ = await transports.call(transport, "gateway_health", "admin", refresh=True)
+    assert success and read.await_count == 1
+    # Access grants have their own revision; health never changes household intent.
+    current = coordinator.engine.state.to_dict()
+    for field in (
+        "revision",
+        "confirmed_revision",
+        "groups",
+        "devices",
+        "rules",
+        "exceptions",
+        "owned",
+        "journal",
+    ):
+        assert current[field] == before[field]
 
 
 async def test_grant_cannot_be_reused_against_a_different_integration_entry(

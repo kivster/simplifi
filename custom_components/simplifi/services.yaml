@@ -1,3 +1,15 @@
+gateway_health:
+  name: Gateway load
+  description: Administrator-only cached device health and bounded controller request counts. Set refresh to read latest device statistics on demand, limited to once per minute. Does not change policies or saved intent.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    refresh:
+      default: false
+      selector:
+        boolean: {}
 upsert_group:
   name: Upsert group
   description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway

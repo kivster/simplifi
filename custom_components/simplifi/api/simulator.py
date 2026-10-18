@@ -3,6 +3,7 @@
 from copy import deepcopy
 
 from ..models import Device, SimpliFiError
+from ..request_meter import RequestMeter
 
 
 class FakeGateway:
@@ -40,6 +41,7 @@ class FakeGateway:
     }
 
     def __init__(self):
+        self.request_meter = RequestMeter()
         self.policies: dict[str, dict] = {}
         self.counter = 0
         self.failure: str | None = None

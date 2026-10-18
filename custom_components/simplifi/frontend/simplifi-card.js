@@ -1,4 +1,4 @@
-/* SimpliFi card 0.18.0b3 — backed exclusively by authenticated HA actions. */
+/* SimpliFi card 0.19.0b1 — backed exclusively by authenticated HA actions. */
 const requestId = () => {
   const crypto = globalThis.crypto;
   if (typeof crypto?.randomUUID === "function") return crypto.randomUUID();
@@ -222,7 +222,7 @@ class SimpliFiCard extends HTMLElement {
   }
   render() {
     if (!this.shadowRoot.querySelector("#content")) {
-      this.shadowRoot.innerHTML = `<style>${styles}</style><div id="content" tabindex="-1" role="region" aria-label="SimpliFi controls"></div><dialog aria-labelledby="dialog-title"><div class="dialog-shell"></div></dialog>`;
+      this.shadowRoot.innerHTML = `<style>${styles}.health-table{width:100%;border-collapse:collapse;font-size:13px}.health-table th,.health-table td{text-align:left;padding:8px;border-bottom:1px solid var(--divider-color);overflow-wrap:anywhere}.health-table caption{text-align:left;margin:12px 0;font-weight:600}</style><div id="content" tabindex="-1" role="region" aria-label="SimpliFi controls"></div><dialog aria-labelledby="dialog-title"><div class="dialog-shell"></div></dialog>`;
       this.shadowRoot.addEventListener("click", (e) => this.click(e));
       this.shadowRoot.addEventListener("input", (e) => this.input(e));
       this.shadowRoot.addEventListener("change", (e) => this.change(e));
@@ -567,7 +567,7 @@ class SimpliFiCard extends HTMLElement {
             `<div class="audit-row"><div class="row between"><div class="grow"><strong>${escape(words(c.action))}</strong><small>${escape(c.target_names.join(", "))}</small></div><span class="badge ${["failed", "partial"].includes(c.outcome) ? "red" : c.outcome === "pending" ? "amber" : ""}">${escape(c.outcome === "failed" ? "Attempt failed" : words(c.outcome))}</span></div><small>${escape(c.actor || "Administrator")} · ${this.time(c.requested_at, true)}${c.reason ? " · " + escape(c.reason) : ""}</small>${this.timingHistoryHTML(c)}${this.historyChangeButton(c)}</div>`,
         )
         .join("") || '<div class="empty"><h3>No changes recorded</h3></div>'
-    }<div class="settings"><h3>Administration</h3><p class="note">Integration ${escape(this.data.version)} · ${escape(this.data.sync)} · revision ${this.data.revision}. ${this.data.management ? "Gateway management enabled." : "Gateway management disabled."}</p>${this.data.issue ? `<div class="banner error">${escape(this.data.issue)}</div>` : ""}<div class="row wrap">${this.button("Updates", "updates")}${this.button("Management", "management")}${this.button("Inspect recovery", "recovery")}${this.button("Manage access", "access")}${this.button("Export configuration", "export")}${this.button("Restore configuration", "import")}<a href="/config/integrations/integration/simplifi">Connection settings</a></div><p class="note">Timed exception expiry needs Home Assistant. Gateway schedules continue during an HA outage, but a temporary pause or allowance may last beyond its deadline.</p></div></ha-card>`;
+    }<div class="settings"><h3>Administration</h3><p class="note">Integration ${escape(this.data.version)} · ${escape(this.data.sync)} · revision ${this.data.revision}. ${this.data.management ? "Gateway management enabled." : "Gateway management disabled."}</p>${this.data.issue ? `<div class="banner error">${escape(this.data.issue)}</div>` : ""}<div class="row wrap">${this.button("Updates", "updates")}${this.button("Gateway load", "gateway-health")}${this.button("Management", "management")}${this.button("Inspect recovery", "recovery")}${this.button("Manage access", "access")}${this.button("Export configuration", "export")}${this.button("Restore configuration", "import")}<a href="/config/integrations/integration/simplifi">Connection settings</a></div><p class="note">Timed exception expiry needs Home Assistant. Gateway schedules continue during an HA outage, but a temporary pause or allowance may last beyond its deadline.</p></div></ha-card>`;
   }
   setupForm() {
     this._setupDraft = {name:"", kind:"family", age:"", person:"", devices:[], schedules:[]};
@@ -741,6 +741,22 @@ mode: access</pre><p class="note">Use an existing non-administrator account. A n
   async updatesView() {
     this.drawUpdates(await this.api("update_status"));
   }
+  async gatewayHealthView() {
+    const request = this._healthRequest = (this._healthRequest || 0) + 1;
+    this.open("Gateway load", '<p role="status">Reading the latest device samples…</p>', this.button("Close", "close"), {kind:"gateway-health"});
+    try {
+      const view = await this.api("gateway_health", {refresh:true});
+      if (request === this._healthRequest && this._modal?.kind === "gateway-health") this.drawGatewayHealth(view);
+    } catch (error) {
+      if (request === this._healthRequest && this._modal?.kind === "gateway-health") this.open("Gateway load", `<div class="banner error" role="alert">${escape(error.message || String(error))}</div>`, this.button("Retry", "gateway-health") + this.button("Close", "close"), {kind:"gateway-health"});
+    }
+  }
+  drawGatewayHealth(h) {
+    const value = (v, suffix = "") => v == null ? "Unknown" : escape(String(v)) + suffix;
+    const uptime = v => v == null ? "Unknown" : `${Math.floor(v / 86400)}d ${Math.floor(v % 86400 / 3600)}h ${Math.floor(v % 3600 / 60)}m`;
+    const r = h.requests;
+    this.open("Gateway load", `${h.simulation ? '<div class="banner warning">Offline simulator · fictional device samples. No controller requests are sent.</div>' : ""}<p class="note">${escape(h.scope)}</p>${h.issue ? `<div class="banner warning">${escape(h.issue)}</div>` : ""}<p class="note spacer">Snapshot read: ${h.read_at ? escape(this.time(h.read_at)) : "Not read"}. ${h.refresh_after_seconds ? `Device reads are cached for another ${escape(h.refresh_after_seconds)} seconds.` : "Refresh to read again."} Status and sample ages are as of this snapshot.</p>${h.capped ? `<div class="banner warning">Showing ${h.returned_devices} of ${h.total_devices} devices; the ${h.device_limit}-device safety limit was reached.</div>` : ""}<div class="section"><h3>Device samples</h3>${h.devices.map(d => `<div class="section"><div class="row between wrap"><strong>${escape(d.name)}</strong><span class="badge ${d.fresh ? "blue" : "amber"}">${d.fresh ? "Sample available" : escape(words(d.status))}</span></div><p class="note">${escape(d.model)} · ${escape(words(d.state.toLowerCase()))}${d.gateway ? " · Gateway" : d.controller ? " · Controller" : ""}</p><p>CPU ${value(d.cpu_pct, "%")} · Memory ${value(d.memory_pct, "%")}</p><p class="note">Load (1 / 5 / 15 min): ${value(d.load_1)} / ${value(d.load_5)} / ${value(d.load_15)}<br>Uptime: ${uptime(d.uptime_seconds)}<br>Sample: ${d.sampled_at ? escape(this.time(d.sampled_at)) + ` · ${value(d.sample_age_seconds, "s")} old` : "Timestamp unknown"}</p>${d.issue ? `<p class="note">${escape(d.issue)}</p>` : ""}</div>`).join("") || '<p class="note">No device samples available.</p>'}</div><div class="section"><h3>SimpliFi controller traffic · last 5 minutes</h3>${r ? `<p>${r.requests} requests · ${r.failures} failures · ${r.retries} retries · ${r.rate_limited} rate limited</p><p class="note">${r.in_flight} in flight · peak ${r.peak_in_flight} · mean ${value(r.mean_ms, " ms")} · max ${value(r.max_ms, " ms")}<br>Observed for ${r.observed_seconds}s since reload, up to ${r.window_seconds}s.</p><p class="note">${escape(r.scope)}</p><div style="overflow-x:auto"><table class="health-table"><caption>Requests by endpoint</caption><thead><tr><th scope="col">Endpoint</th><th scope="col">Requests</th><th scope="col">Failures</th><th scope="col">Retries</th></tr></thead><tbody>${r.endpoints.map(e => `<tr><th scope="row">${escape(e.method)} ${escape(e.endpoint)}</th><td>${e.requests}</td><td>${e.failures}</td><td>${e.retries}</td></tr>`).join("")}</tbody></table></div>` : '<p class="note">Request accounting unavailable.</p>'}</div>`, this.button("Refresh snapshot", "gateway-health") + this.button("Close", "close"), {kind:"gateway-health"});
+  }
   drawUpdates(u) {
     this._updates = u;
     this.open("SimpliFi updates", `<p><strong>Installed ${escape(u.installed)}</strong></p><p>Manage releases in HACS. The integration and its dashboard card are updated together; restart Home Assistant when prompted.</p>${u.hacs_loaded ? '<p><a href="/hacs">Open HACS</a></p>' : '<p class="note">HACS is not loaded. For a manual installation, replace the integration folder with a reviewed release and restart Home Assistant.</p>'}<p class="note">Release availability is shown in HACS. SimpliFi does not need a GitHub token.</p>${u.legacy_attention ? `<div class="banner warning">${escape(u.legacy_attention)}</div>` : ""}`, this.button("Close", "close"), {kind:"updates"});
@@ -756,6 +772,7 @@ mode: access</pre><p class="note">Use an existing non-administrator account. A n
       if (action === "policy-refresh") { await this.refresh(); this.otherPolicies(id); return; }
       if (action === "policy-more") { this._policyLimit = (this._policyLimit || 50) + 50; this.updatePolicyList(); return; }
       if (action === "updates") { await this.updatesView(); return; }
+      if (action === "gateway-health") { await this.gatewayHealthView(); return; }
       if (action === "refresh") {
         await this.refresh();
         return;

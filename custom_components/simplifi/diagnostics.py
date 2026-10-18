@@ -6,6 +6,7 @@ async def async_get_config_entry_diagnostics(hass, entry):
     state = engine.state
     protection = entry.runtime_data.protection.snapshot(engine.clock())
     coexistence = entry.runtime_data.coexistence.snapshot(engine.clock(), state)
+    health = entry.runtime_data.gateway_health.snapshot()
     return {
         "simulation": entry.data["simulation"],
         "inventory_readback": engine.gateway.current_network_reader.snapshot(engine.clock())
@@ -41,4 +42,16 @@ async def async_get_config_entry_diagnostics(hass, entry):
             if j["status"] != "verified"
         ],
         "issue": state.issue,
+        "controller_requests": health["requests"],
+        "device_health": {
+            k: health[k]
+            for k in (
+                "status",
+                "read_at",
+                "last_attempt_at",
+                "returned_devices",
+                "total_devices",
+                "capped",
+            )
+        },
     }

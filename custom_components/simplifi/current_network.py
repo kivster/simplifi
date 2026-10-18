@@ -102,9 +102,13 @@ class CurrentNetworkReader:
             api = matching_unifi_api(self.hass, self.gateway)
             from aiounifi.models.api import ApiRequest
 
+            from .metered_unifi import read
+
             async with asyncio.timeout(15):
-                networks = await api.request(ApiRequest(method="get", path="/rest/networkconf"))
-                clients = await api.request(ApiRequest(method="get", path="/stat/sta"))
+                networks = await read(
+                    api, ApiRequest(method="get", path="/rest/networkconf"), self.gateway
+                )
+                clients = await read(api, ApiRequest(method="get", path="/stat/sta"), self.gateway)
             now = utcnow()
             result, counts = current_networks(networks, clients, self.gateway.networks, now)
         except SimpliFiError as err:

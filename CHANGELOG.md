@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.19.0b1 — 2026-10-18
+
+- Add an administrator-only Gateway load dialog with on-demand device CPU, memory, load averages, uptime and timestamped sample freshness.
+- Count this integration's controller HTTP exchanges, retries, failures, rate limits, latency and concurrency over a bounded five-minute window, with fixed endpoint labels and no credentials or household identifiers.
+- Reuse the existing HA UniFi connection and HTTP pool for filtering and current-network reads; account for native reauthentication without patching the shared client.
+- Keep routine dashboard and diagnostics reads cached. Device-statistics reads are explicit, bounded to 64 devices and four simultaneous requests, and limited to once per minute.
+
 ## 0.18.0b3 — 2026-10-18
 
 - Accept reordered weekdays when confirming weekly UniFi schedules, including overnight windows crossing Sunday.

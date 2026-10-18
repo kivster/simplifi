@@ -17,6 +17,7 @@ from .coexistence import CoexistenceReader
 from .const import DOMAIN
 from .dns_checks import QueryCache, due_claim, run_probe, simulated_probe
 from .dns_context import jobs
+from .gateway_health import GatewayHealth
 from .models import SimpliFiError, fingerprint, instant
 from .protection import ProtectionReader
 from .storage import HouseholdStorage
@@ -52,6 +53,7 @@ class SimpliFiCoordinator(DataUpdateCoordinator):
         }
         self.protection = ProtectionReader(hass, engine.gateway)
         self.coexistence = CoexistenceReader(hass, engine.gateway)
+        self.gateway_health = GatewayHealth(engine.gateway, engine.clock)
 
     @callback
     def schedule_deadline(self, *, catch_up=False):
