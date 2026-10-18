@@ -17,6 +17,8 @@ from copy import deepcopy
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
+if sys.flags.optimize:
+    raise RuntimeError("Run without -O; assertions are acceptance checks")
 root = Path(sys.argv[1]).resolve()
 phase = sys.argv[2]
 assert root.parent == Path(tempfile.gettempdir()).resolve() and root.name.startswith(

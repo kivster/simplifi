@@ -73,7 +73,8 @@ def run_phase(root, phase):
     if result.returncode != 0 or setup_error:
         # The fixture contains fictional data only. Never upload its auth store/archive.
         print(output[-12_000:], file=sys.stderr)
-        raise AssertionError(f"{phase} failed ({result.returncode}); inspect {log.name}")
+        reason = "HA startup error" if setup_error else f"exit code {result.returncode}"
+        raise AssertionError(f"{phase} failed: {reason}; inspect {log.name}")
     print(f"Passed cold phase: {phase}", flush=True)
     if phase == "request-restore":
         return None
@@ -139,7 +140,8 @@ def main():
     parser.add_argument("--current-archive", type=Path, required=True)
     parser.add_argument("--current-sha256", required=True)
     args = parser.parse_args()
-    assert sys.flags.optimize == 0, "Run without -O; assertions are acceptance checks"
+    if sys.flags.optimize:
+        raise RuntimeError("Run without -O; assertions are acceptance checks")
     previous = release(args.previous_archive, args.previous_sha256)
     current = release(args.current_archive, args.current_sha256)
     root = Path(tempfile.mkdtemp(prefix="simplifi-recovery-lab-")).resolve()
