@@ -9,7 +9,7 @@ For storage-managed Lovelace resources, integration setup registers the card and
 If your resources are configured in YAML, add the returned `resource` URL with `type: module`. Remove the previous resource entry for this card, if present, to avoid loading two versions. The bundled URL for this release is:
 
 ```yaml
-url: /simplifi_static/simplifi-card.js?v=0.21.1b1
+url: /simplifi_static/simplifi-card.js?v=0.21.2b1
 type: module
 ```
 
@@ -18,3 +18,5 @@ Reload the browser or Companion app frontend after an integration update. The ge
 The **Activity → Administration → Gateway load** dialog shows timestamped device statistics and SimpliFi controller traffic. See [gateway health](gateway-health.md) for caching, privacy and coverage.
 
 Person cards separate continuous/all-day rules from timed windows. Activity distinguishes original attempt outcomes from later readback of the same revision. See [rule and activity status](rule-status.md).
+
+Unconfirmed controls show the integration's sync reason when available. This may describe failed discovery, incomplete setup, an ownership conflict or an uncertain write; it does not always mean the controller is unreachable. See [native dashboard acceptance](ui-acceptance.md) for browser checks and their limits.

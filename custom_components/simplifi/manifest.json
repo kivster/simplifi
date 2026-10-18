@@ -20,5 +20,5 @@
   "requirements": [
     "dnspython==2.9.0"
   ],
-  "version": "0.21.1b1"
+  "version": "0.21.2b1"
 }

@@ -1,4 +1,4 @@
-# Release status — 0.21.1b1
+# Release status — 0.21.2b1
 
 SimpliFi is a beta custom integration for Home Assistant. Install it as a custom HACS repository or manually; it is not included in HACS's default catalogue.
 
@@ -15,9 +15,13 @@ SimpliFi is a beta custom integration for Home Assistant. Install it as a custom
 - Rule switches use HA's configuration category to stay out of automatic assistant exposure. Existing per-entity exposure choices remain preserved; review older cached choices after upgrading. Deliberate exposure does not bypass authenticated admission.
 - HACS-managed distribution. The old host-wide installer and its credential form and schedule are removed. Legacy installation actions refuse requests and direct administrators to HACS.
 
+- Unconfirmed dashboard state now shows the integration's specific sync reason, with a stale-confirmation fallback when no reason is available. Pointer-opened dialogs restore focus to their initiating control after dismissal, including across background refreshes. Long names without spaces wrap within cards and dialogs.
+
 ## Evidence and limitations
 
 Automated Python tests exercise the simulator, real Home Assistant setup and services, authentication, durable state, reconciliation, resource delivery and updates. JavaScript tests exercise the card's interaction logic. Optional policy-schema tests require a separately acquired official API document.
+
+The [native dashboard checks](ui-acceptance.md) cover all five views in WebKit at phone, tablet and desktop viewport sizes, light/dark themes, long names, a rule wizard, dialog dismissal and simulated failure states. These are emulated browser viewports, with physical Companion and Watch acceptance still outstanding.
 
 The [isolated native Core recovery drill](recovery.md#recorded-acceptance) passed 11 cold-process phases for release archives `0.20.1b1` and `0.21.0b1`: update, native backup/restore, retained request retry, compatible rollback and re-upgrade. It preserved saved intent, ownership, identities, permissions, history and customized/unrelated dashboards against an independent durable simulated gateway.
 
