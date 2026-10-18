@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   recovery:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -25,7 +25,7 @@ jobs:
       - name: Install native HA frontend prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends ffmpeg libturbojpeg0
+          sudo apt-get install --yes --no-install-recommends ffmpeg libturbojpeg
       - run: python -m pip install -r tools/simplifi/requirements-recovery.txt
       - name: Download exact public release archives
         env:

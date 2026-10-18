@@ -32,7 +32,7 @@ The drill exercises:
 - A customized generated dashboard, a separate unrelated dashboard and an unrelated resource. Only the SimpliFi resource's version URL may change.
 - No duplicate simulated policy creation during cold startup, update, restore or rollback.
 
-Use Python 3.14 on a disposable Linux development runner and trusted release archives. The native HA frontend also requires the system packages `ffmpeg` and `libturbojpeg0` on the Ubuntu runner. Install the pinned lab dependencies in a separate virtual environment:
+Use Python 3.14 on a disposable Linux development runner and trusted release archives. The Ubuntu 24.04 runner also installs `ffmpeg` and the [libturbojpeg runtime](https://packages.ubuntu.com/noble/libturbojpeg) for the native HA frontend. Install the pinned lab dependencies in a separate virtual environment:
 
 ```sh
 python -m pip install -r tools/simplifi/requirements-recovery.txt
