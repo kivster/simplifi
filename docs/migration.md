@@ -12,3 +12,5 @@ SimpliFi uses the `simplifi` integration domain, storage namespace and export fo
 For later updates within the `simplifi` domain, use HACS and follow its restart prompt. Existing SimpliFi entries and stored household state remain in place.
 
 For rollback, use the matching verified backup and previous files. Avoid restoring an old policy ownership journal over a gateway whose policies have changed. Do not manually edit Home Assistant's `.storage` files. Resolve outstanding installer or recovery attempts before switching policy managers.
+
+For updates within the same integration identity, see [backups and release rollback](recovery.md), including the limits of the isolated Core recovery drill.

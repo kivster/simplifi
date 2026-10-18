@@ -40,6 +40,8 @@ If replacing a prototype or an earlier beta with a different integration identit
 
 HACS manages release checks and installation. The Activity view shows the installed version and opens HACS. SimpliFi does not request a GitHub token, run Git Pull, update other integrations or restart Home Assistant automatically. Follow the restart prompt after an update.
 
+See [backups and release rollback](docs/recovery.md) for recovery material, compatibility checks and the isolated native HA Core recovery drill.
+
 ## Interpreting status
 
 Saved intent, gateway readback and a successful test on a device are different kinds of evidence. Person cards show always-on/all-day rules with named targets and device coverage; Activity preserves original attempt outcomes alongside later readback. See [rule and activity status](docs/rule-status.md). A confirmed policy does not prove that every application or traffic path is blocked. DNS observations originate from Home Assistant; they are not tests from a child's device.
