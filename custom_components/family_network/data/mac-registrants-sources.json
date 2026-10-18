@@ -1,0 +1,30 @@
+{
+  "source": "IEEE Registration Authority public registrant lists",
+  "retrieved_at": "2026-10-14T16:57:04.887973+00:00",
+  "sources": [
+    {
+      "registry": "MA-L",
+      "url": "https://regauth.standards.ieee.org/standards-ra-web/rest/assignments/",
+      "rows": 40336,
+      "unique_allocations": 40333,
+      "ambiguous_allocations": 2,
+      "response_sha256": "e52e0500a5a54aed9366cab44c02201092fdfacea78d66b0ccc2db5ca9db360b"
+    },
+    {
+      "registry": "MA-M",
+      "url": "https://regauth.standards.ieee.org/standards-ra-web/rest/assignments/",
+      "rows": 6635,
+      "unique_allocations": 6635,
+      "ambiguous_allocations": 0,
+      "response_sha256": "1523d1c381b1f7b5936fd59c7e5826c447d933bdeced87e37bd2ead41bf0e0f2"
+    },
+    {
+      "registry": "MA-S",
+      "url": "https://regauth.standards.ieee.org/standards-ra-web/rest/assignments/",
+      "rows": 7233,
+      "unique_allocations": 7233,
+      "ambiguous_allocations": 0,
+      "response_sha256": "cb37be6066143c53310729d690c8193dc0c2d37d6e536770c309b009a83184d9"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+homeassistant==2026.10.1
+pytest-homeassistant-custom-component==0.13.372
+pytest==9.0.3
+pytest-asyncio==1.4.0
+ruff==0.17.0
+mypy==2.4.0
+PyYAML==6.0.3
+jsonschema==4.26.0
+dnspython==2.9.0
+aiounifi==96

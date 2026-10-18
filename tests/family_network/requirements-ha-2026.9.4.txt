@@ -1,0 +1,12 @@
+# Reproduce the earlier HA compatibility environment. The original requirements.txt
+# retains the separate HA 2026.10.1 test environment.
+homeassistant==2026.9.4
+pytest-homeassistant-custom-component==0.13.367
+pytest==9.0.3
+pytest-asyncio==1.4.0
+ruff==0.17.0
+mypy==2.4.0
+PyYAML==6.0.3
+jsonschema==4.26.0
+dnspython==2.9.0
+aiounifi==95

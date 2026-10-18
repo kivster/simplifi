@@ -1,0 +1,1575 @@
+upsert_group:
+  name: Upsert group
+  description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    group_id:
+      required: false
+      selector:
+        text: {}
+    name:
+      required: true
+      selector:
+        text: {}
+    kind:
+      required: false
+      selector:
+        text: {}
+    age:
+      required: false
+      selector:
+        text: {}
+    person:
+      required: false
+      selector:
+        text: {}
+    archived:
+      required: false
+      selector:
+        boolean: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+delete_group:
+  name: Delete group
+  description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    group_id:
+      required: true
+      selector:
+        text: {}
+    confirm:
+      required: true
+      selector:
+        boolean: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+assign_device:
+  name: Assign device
+  description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    device_id:
+      required: true
+      selector:
+        text: {}
+    group_id:
+      required: false
+      selector:
+        text: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+upsert_rule:
+  name: Upsert rule
+  description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    rule_id:
+      required: false
+      selector:
+        text: {}
+    name:
+      required: true
+      selector:
+        text: {}
+    kind:
+      required: true
+      selector:
+        text: {}
+    groups:
+      description: Choose groups or networks, never both.
+      required: false
+      selector:
+        object: {}
+    networks:
+      description: Explicit managed network IDs. Affects every current and future device on each network.
+      required: false
+      selector:
+        object: {}
+    targets:
+      required: false
+      selector:
+        object: {}
+    windows:
+      required: false
+      selector:
+        object: {}
+    enabled:
+      required: false
+      selector:
+        boolean: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+delete_rule:
+  name: Delete rule
+  description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    rule_id:
+      required: true
+      selector:
+        text: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+set_rule_enabled:
+  name: Set rule enabled
+  description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    rule_id:
+      required: true
+      selector:
+        text: {}
+    enabled:
+      required: true
+      selector:
+        boolean: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+pause_internet:
+  name: Pause internet
+  description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    group_id:
+      required: true
+      selector:
+        text: {}
+    duration_minutes:
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 10080
+          mode: box
+    expires_at:
+      required: false
+      selector:
+        text: {}
+    next_window_end:
+      required: false
+      selector:
+        boolean: {}
+    indefinite:
+      required: false
+      selector:
+        boolean: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+resume_internet:
+  name: Resume internet
+  description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    group_id:
+      required: true
+      selector:
+        text: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+extend_pause:
+  name: Extend pause
+  description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    group_id:
+      required: true
+      selector:
+        text: {}
+    duration_minutes:
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 10080
+          mode: box
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+allow_internet:
+  name: Allow internet
+  description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    group_id:
+      required: true
+      selector:
+        text: {}
+    duration_minutes:
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 10080
+          mode: box
+    expires_at:
+      required: false
+      selector:
+        text: {}
+    next_window_end:
+      required: false
+      selector:
+        boolean: {}
+    indefinite:
+      required: false
+      selector:
+        boolean: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+end_allowance:
+  name: End allowance
+  description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    group_id:
+      required: true
+      selector:
+        text: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+suspend_rule:
+  name: Suspend rule
+  description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    rule_id:
+      required: true
+      selector:
+        text: {}
+    group_id:
+      required: false
+      selector:
+        text: {}
+    duration_minutes:
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 10080
+          mode: box
+    expires_at:
+      required: false
+      selector:
+        text: {}
+    next_window_end:
+      required: false
+      selector:
+        boolean: {}
+    indefinite:
+      required: false
+      selector:
+        boolean: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+resume_rule:
+  name: Resume rule
+  description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    rule_id:
+      required: true
+      selector:
+        text: {}
+    group_id:
+      required: false
+      selector:
+        text: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+extend_rule_suspension:
+  name: Extend rule suspension
+  description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    rule_id:
+      required: true
+      selector:
+        text: {}
+    group_id:
+      required: false
+      selector:
+        text: {}
+    duration_minutes:
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 10080
+          mode: box
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+allow_rule:
+  name: Allow rule
+  description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    rule_id:
+      required: true
+      selector:
+        text: {}
+    group_id:
+      required: false
+      selector:
+        text: {}
+    duration_minutes:
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 10080
+          mode: box
+    expires_at:
+      required: false
+      selector:
+        text: {}
+    next_window_end:
+      required: false
+      selector:
+        boolean: {}
+    indefinite:
+      required: false
+      selector:
+        boolean: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+end_rule_allowance:
+  name: End rule allowance
+  description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    rule_id:
+      required: true
+      selector:
+        text: {}
+    group_id:
+      required: false
+      selector:
+        text: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+set_quarantine:
+  name: Set quarantine
+  description: Administrator only. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    enabled:
+      required: true
+      selector:
+        boolean: {}
+    excluded_devices:
+      required: true
+      selector:
+        object: {}
+    confirm:
+      required: true
+      selector:
+        boolean: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+suspend_quarantine:
+  name: Suspend quarantine
+  description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    duration_minutes:
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 10080
+          mode: box
+    expires_at:
+      required: false
+      selector:
+        text: {}
+    next_window_end:
+      required: false
+      selector:
+        boolean: {}
+    indefinite:
+      required: false
+      selector:
+        boolean: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+extend_quarantine_suspension:
+  name: Extend quarantine suspension
+  description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    duration_minutes:
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 10080
+          mode: box
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+resume_quarantine:
+  name: Resume quarantine
+  description: Authenticated administrator or explicitly scoped account. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+set_management:
+  name: Set management
+  description: Administrator only. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    enabled:
+      required: true
+      selector:
+        boolean: {}
+    expiry_acknowledged:
+      required: false
+      selector:
+        boolean: {}
+    gateway_timezone_confirmed:
+      required: false
+      selector:
+        boolean: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+upsert_probe:
+  name: Upsert probe
+  description: Administrator-only DNS observation action. Does not change gateway
+    policies. Configuration edits invalidate previous observations.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    probe_id:
+      required: false
+      selector:
+        text: {}
+    name:
+      required: true
+      selector:
+        text: {}
+    domains:
+      required: true
+      selector:
+        object: {}
+    resolver:
+      required: false
+      selector:
+        text: {}
+    baseline_resolver:
+      required: false
+      selector:
+        text: {}
+    group_id:
+      required: false
+      selector:
+        text: {}
+    vantage:
+      required: false
+      selector:
+        text: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+    expected_dns_revision: &id001
+      selector:
+        number:
+          min: 0
+          mode: box
+    category:
+      required: false
+      selector:
+        text: {}
+    enabled:
+      selector:
+        boolean: {}
+delete_probe:
+  name: Delete probe
+  description: Administrator-only DNS observation action. Does not change gateway
+    policies. Configuration edits invalidate previous observations.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    probe_id:
+      required: true
+      selector:
+        text: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+    expected_dns_revision: *id001
+set_probe_schedule:
+  name: Set probe schedule
+  description: Administrator-only DNS observation action. Does not change gateway
+    policies. Configuration edits invalidate previous observations.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    enabled:
+      required: true
+      selector:
+        boolean: {}
+    days:
+      required: true
+      selector:
+        object: {}
+    time:
+      required: true
+      selector:
+        text: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+    expected_dns_revision: *id001
+check_dns:
+  name: Check dns
+  description: Administrator-only DNS observation action. Does not change gateway
+    policies. Configuration edits invalidate previous observations.
+  fields:
+    entry_id: &id002
+      required: true
+      selector:
+        text: {}
+    probe_id:
+      required: false
+      selector:
+        text: {}
+    expected_revision: &id003
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id: &id004
+      selector:
+        text: {}
+    reason: &id005
+      selector:
+        text: {}
+    expected_dns_revision: *id001
+    group_id:
+      required: false
+      selector:
+        text: {}
+restore_probe:
+  name: Restore default DNS samples
+  description: Restore removed built-in samples and enable the list; preserves custom
+    sample domains.
+  fields:
+    entry_id: *id002
+    expected_revision: *id003
+    request_id: *id004
+    reason: *id005
+    expected_dns_revision: *id001
+    probe_id:
+      required: true
+      selector:
+        text: {}
+set_dns_settings:
+  name: Set DNS resolver settings
+  description: Save household and person resolver inheritance. IP addresses and HTTPS
+    DoH endpoints are supported. Invalidates observations; never writes gateway policies.
+  fields:
+    entry_id: *id002
+    expected_revision: *id003
+    request_id: *id004
+    reason: *id005
+    expected_dns_revision: *id001
+    enabled:
+      required: true
+      selector:
+        boolean: {}
+    household_resolver:
+      required: true
+      selector:
+        text: {}
+    baseline_resolver:
+      required: true
+      selector:
+        text: {}
+    group_resolvers:
+      required: true
+      selector:
+        object: {}
+    freshness_hours:
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 168
+          mode: box
+sync_now:
+  name: Sync now
+  description: Administrator only. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+export_configuration:
+  name: Export configuration
+  description: Administrator only. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+preview_import:
+  name: Preview import
+  description: Administrator only. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    network_mapping:
+      description: Explicit source network ID to current managed network ID mapping; required for another controller, site or scope.
+      selector:
+        object: {}
+    configuration:
+      required: true
+      selector:
+        object: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+apply_import:
+  name: Apply import
+  description: Administrator only. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    network_mapping:
+      description: Explicit source network ID to current managed network ID mapping; required for another controller, site or scope.
+      selector:
+        object: {}
+    configuration:
+      required: true
+      selector:
+        object: {}
+    preview_hash:
+      required: true
+      selector:
+        text: {}
+    expected_revision:
+      required: true
+      selector:
+        text: {}
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+cleanup_owned:
+  name: Cleanup owned
+  description: Administrator only. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    confirm:
+      required: true
+      selector:
+        boolean: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+dashboard_configuration:
+  name: Dashboard configuration
+  description: Administrator only. Returns a dashboard preview without saving or changing gateway intent.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    presentation:
+      default: enhanced
+      selector:
+        select:
+          options:
+            - enhanced
+            - native
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+view_activity:
+  name: View activity
+  description: Administrator only. Saves managed intent and returns a change ID; gateway
+    confirmation is separate. Missing caller identity is rejected.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+dashboard_data:
+  name: Read dashboard data
+  description: Administrator-only read model for SimpliFi Lovelace cards. No gateway writes.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+dashboard_catalogue:
+  name: Search dashboard catalogue
+  description: Administrator-only category or application search. Returns up to 100 matches.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    kind:
+      required: true
+      selector:
+        select:
+          options:
+            - category
+            - application
+    query:
+      selector:
+        text: {}
+
+forget_device:
+  name: Forget device
+  description: Removes the local assignment and quarantine exclusion. Present in-scope clients are rediscovered unassigned. Does not delete the UniFi client.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    device_id:
+      required: true
+      selector:
+        text: {}
+    confirm:
+      required: true
+      selector:
+        boolean: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+edit_allowance:
+  name: Change allowance end time
+  description: Changes only an active allowance deadline, retaining its original captured restrictions and identity. Home Assistant must be running for expiry.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    exception_id:
+      required: true
+      selector:
+        text: {}
+    expires_at:
+      required: true
+      description: ISO 8601 deadline with timezone, within the next seven days.
+      selector:
+        text: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+activity_history:
+  name: Read retained activity history
+  description: Administrator-only paginated household changes or sync runs. Does not request a gateway sync.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    kind:
+      selector:
+        select:
+          options: [changes, sync]
+    change_id:
+      description: Optional retained household change ID. With kind sync, returns only attempts for that saved revision, plus the latest retained result. Does not relabel the original attempt or prove client enforcement.
+      selector:
+        text: {}
+    before_id:
+      selector:
+        text: {}
+    limit:
+      selector:
+        number:
+          min: 1
+          max: 100
+          mode: box
+    outcome:
+      selector:
+        text: {}
+preview_recovery:
+  name: Inspect gateway recovery
+  description: Administrator-only complete controller read and recorded operation evidence. Does not write a policy.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    operation_id:
+      selector:
+        text: {}
+resolve_operation:
+  name: Record reviewed gateway recovery
+  description: Administrator-only evidence-bound resolution. Use the dashboard recovery review first. Names alone do not establish ownership.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    operation_id:
+      required: true
+      selector:
+        text: {}
+    preview_hash:
+      required: true
+      selector:
+        text: {}
+    decision:
+      required: true
+      selector:
+        select:
+          options: [attach, confirm_absent, confirm_not_applied]
+    confirm:
+      required: true
+      selector:
+        boolean: {}
+    request_finished:
+      description: Required for confirm_absent and confirm_not_applied. Independently confirm the original UniFi request ended without the requested change; an absent or unchanged policy read is not proof.
+      selector:
+        boolean: {}
+    reason:
+      selector:
+        text: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+
+access_status:
+  name: Read scoped family status
+  description: Authenticated account with an active explicit grant. Returns only its
+    permitted household scope.
+  fields:
+    entry_id:
+      selector:
+        text: {}
+      required: true
+access_users:
+  name: List eligible access accounts
+  description: Administrator-only list of existing active non-administrator Home Assistant
+    accounts.
+  fields:
+    entry_id:
+      selector:
+        text: {}
+      required: true
+list_access_grants:
+  name: List SimpliFi access grants
+  description: Administrator-only permission review with access revision.
+  fields:
+    entry_id:
+      selector:
+        text: {}
+      required: true
+set_access_grant:
+  name: Save scoped SimpliFi access
+  description: Administrator only. Review role, explicit groups/networks and optional
+    expiry in Activity → Manage access. Does not restrict ordinary Home Assistant
+    account permissions.
+  fields:
+    entry_id:
+      selector:
+        text: {}
+      required: true
+    user_id:
+      selector:
+        text: {}
+      required: true
+    scope:
+      selector:
+        select:
+          options:
+          - read_only
+          - agent_controls
+          - watch_rules
+      required: true
+    groups:
+      selector:
+        object: {}
+    networks:
+      selector:
+        object: {}
+    all_groups:
+      selector:
+        boolean: {}
+      description: Includes all current and future groups. Networks remain explicitly
+        listed.
+    expires_at:
+      selector:
+        text: {}
+      description: Optional ISO 8601 deadline with timezone, within the next year.
+    confirm:
+      selector:
+        boolean: {}
+      required: true
+    expected_access_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+revoke_access_grant:
+  name: Revoke SimpliFi access
+  description: Administrator only. Immediately removes this integration grant; leaves
+    the HA account active.
+  fields:
+    entry_id:
+      selector:
+        text: {}
+      required: true
+    user_id:
+      selector:
+        text: {}
+      required: true
+    confirm:
+      selector:
+        boolean: {}
+      required: true
+    expected_access_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+
+preview_setup:
+  name: Review guided household setup
+  description: Administrator-only review of a person, device assignments and optional internet schedules. No gateway writes.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    configuration:
+      required: true
+      selector:
+        object: {}
+apply_setup:
+  name: Apply reviewed household setup
+  description: Administrator only. Atomically saves a reviewed person, assignments and optional schedules; normal reconciliation applies current intent.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    configuration:
+      required: true
+      selector:
+        object: {}
+    preview_hash:
+      required: true
+      selector:
+        text: {}
+    expected_revision:
+      required: true
+      selector:
+        number:
+          min: 0
+          mode: box
+    confirm:
+      required: true
+      selector:
+        boolean: {}
+    request_id:
+      selector:
+        text: {}
+update_status:
+  name: SimpliFi update information
+  description: Administrator-only installed version and HACS handoff. Does not check remote releases or modify configuration.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+check_updates:
+  name: SimpliFi update information (compatibility)
+  description: Returns the installed version and HACS handoff. Check for new releases in HACS.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+preview_update:
+  name: Legacy update preview (disabled)
+  description: Compatibility action. Always refuses; use HACS to manage SimpliFi releases.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+install_update:
+  name: Legacy update installation (disabled)
+  description: Compatibility action. Always refuses; use HACS to install SimpliFi releases.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    expected_update_revision:
+      required: true
+      selector:
+        number:
+          min: 0
+          mode: box
+    preview_hash:
+      required: true
+      selector:
+        text: {}
+    request_id:
+      required: true
+      selector:
+        text: {}
+    confirm:
+      required: true
+      selector:
+        boolean: {}
+set_update_schedule:
+  name: Legacy update schedule (disabled)
+  description: Compatibility action. Always refuses; configure update preferences in Home Assistant or HACS.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    expected_update_revision:
+      required: true
+      selector:
+        number:
+          min: 0
+          mode: box
+    enabled:
+      required: true
+      selector:
+        boolean: {}
+    days:
+      required: true
+      description: Integer weekdays, Monday 0 through Sunday 6.
+      selector:
+        object: {}
+    time:
+      required: true
+      description: Household-local HH:MM.
+      selector:
+        text: {}
+    confirm:
+      required: true
+      selector:
+        boolean: {}
+recover_update:
+  name: Legacy update recovery (disabled)
+  description: Compatibility action. Always refuses; an interrupted previous installer must be resolved before migration.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    expected_update_revision:
+      required: true
+      selector:
+        number:
+          min: 0
+          mode: box
+    confirm:
+      required: true
+      selector:
+        boolean: {}
+
+unblock_group:
+  name: Unblock group rules
+  description: Lift group-assigned rules of any kind, preserving other groups, whole-network rules and existing
+    suspensions. Default timing captures active rules to their individual ends; explicit timing captures every enabled
+    assigned rule. Authenticated administrator or explicitly scoped account. Saved intent and gateway confirmation
+    are separate.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    group_id:
+      required: true
+      selector:
+        text: {}
+    duration_minutes:
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 10080
+          mode: box
+    expires_at:
+      required: false
+      selector:
+        text: {}
+    next_window_end:
+      required: false
+      selector:
+        boolean: {}
+    indefinite:
+      required: false
+      selector:
+        boolean: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+end_group_unblock:
+  name: End group rule allowances
+  description: End all allowances on this group’s rules; keep its pauses and suspensions. Authenticated administrator
+    or explicitly scoped account. Saved intent and gateway confirmation are separate.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    group_id:
+      required: true
+      selector:
+        text: {}
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
+extend_group_unblock:
+  name: Extend group rule allowances
+  description: 'Give every active finite group allowance the same deadline: the latest current end plus these minutes.
+    Indefinite allowances are unchanged. Authenticated administrator or explicitly scoped account. Saved intent
+    and gateway confirmation are separate.'
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    group_id:
+      required: true
+      selector:
+        text: {}
+    duration_minutes:
+      required: true
+      selector:
+        number:
+          min: 1
+          max: 10080
+          mode: box
+    expected_revision:
+      selector:
+        number:
+          min: 0
+          mode: box
+    request_id:
+      selector:
+        text: {}
+    reason:
+      selector:
+        text: {}
