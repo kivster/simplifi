@@ -1,4 +1,4 @@
-# Release status — 0.20.0b1
+# Release status — 0.20.1b1
 
 SimpliFi is a beta custom integration for Home Assistant. Install it as a custom HACS repository or manually; it is not included in HACS's default catalogue.
 
@@ -10,6 +10,7 @@ SimpliFi is a beta custom integration for Home Assistant. Install it as a custom
 - An offline simulator and versioned dashboard resource registration. All integration identifiers, storage and actions use the `simplifi` namespace.
 - Continuous/all-day person rule summaries, scoped target names and separate original-action/later-readback evidence in Activity.
 - On-demand site device health and bounded controller request accounting, available to HA administrators from the Activity view.
+- One bounded fresh inventory retry for conflicting device-network observations, with diagnostic attempt counts and a specific persistent-conflict repair warning. Persistent ambiguity still freezes writes.
 - HACS-managed distribution. The old host-wide installer and its credential form and schedule are removed. Legacy installation actions refuse requests and direct administrators to HACS.
 
 ## Evidence and limitations

@@ -12,6 +12,7 @@ from urllib.parse import quote, urlsplit
 import aiohttp
 
 from ..inventory import (
+    InventoryScopeError,
     client_network,
     client_references,
     mac_registrant,
@@ -20,6 +21,8 @@ from ..inventory import (
 )
 from ..models import CapabilityError, Device, SimpliFiError, instant, mac_address, utcnow
 from ..request_meter import MeteredSession, RequestMeter
+
+DISCOVERY_RETRY_TIMEOUT = 30
 
 
 def external_zone_id(zones: list[dict]) -> str:
@@ -98,6 +101,7 @@ class UniFiGateway:
         self.version = "unknown"
         self.legacy_site = None
         self.request_meter = RequestMeter()
+        self.discovery_readback: dict = {"status": "not_read", "attempts": 0, "scope_issues": []}
 
     @property
     def site_path(self):
@@ -267,8 +271,51 @@ class UniFiGateway:
         )
 
     async def discover(self) -> list[Device]:
+        """Retry one inconsistent scope snapshot, without accepting either side of a conflict."""
+        evidence = self.discovery_readback = {
+            "status": "reading",
+            "attempted_at": utcnow().isoformat(),
+            "observed_at": None,
+            "attempts": 0,
+            "scope_issues": [],
+            "lan_clients": None,
+        }
+        required_current: set[str] = set()
+        try:
+            for attempt in range(2):
+                evidence["attempts"] = attempt + 1
+                try:
+                    # The retry rereads all resources and every page. Only its own
+                    # complete, validated inventory can reach the engine. Bound
+                    # extra controller work, including the brief settling delay.
+                    async with asyncio.timeout(DISCOVERY_RETRY_TIMEOUT if attempt else None):
+                        if attempt:
+                            await asyncio.sleep(1)
+                        devices = await self._discover_once(required_current)
+                except InventoryScopeError as err:
+                    evidence["scope_issues"].append(err.reason)
+                    if attempt:
+                        raise
+                else:
+                    evidence.update(
+                        status="complete",
+                        observed_at=utcnow().isoformat(),
+                        lan_clients=len(devices),
+                    )
+                    return devices
+        finally:
+            if evidence["status"] == "reading":
+                evidence["status"] = "incomplete"
+        raise SimpliFiError("Scoped discovery is incomplete")
+
+    async def _discover_once(self, required_current: set[str]) -> list[Device]:
         await self.refresh_resources()
         rows = await self.pages(self.site_path + "/clients", cap=2000)
+        # Keep the two current-client observations adjacent. Display/reference
+        # reads must not add avoidable skew between their scope evidence.
+        current: dict[str, dict] = (
+            await self.current_network_reader.read() if self.current_network_reader else {}
+        )
         references: dict[str, set[str]] = {}
         for key in self.networks:
             try:
@@ -296,9 +343,6 @@ class UniFiGateway:
             registrants = await asyncio.to_thread(registrant_database)
         except OSError, ValueError, KeyError:
             registrants = None
-        current: dict[str, dict] = (
-            await self.current_network_reader.read() if self.current_network_reader else {}
-        )
         devices = []
         seen = set()
         observed = utcnow().isoformat()
@@ -315,9 +359,19 @@ class UniFiGateway:
             if mac in seen:
                 raise SimpliFiError("Duplicate client MAC; discovery incomplete")
             seen.add(mac)
-            network, source = client_network(
-                row["id"], ip, self.networks, references, current.get(mac, {}).get("network")
-            )
+            current_network = current.get(mac, {}).get("network")
+            if mac in required_current and current_network is None:
+                # Do not resolve a contradiction by losing the contradicting
+                # source and falling back to the other side's IP subnet.
+                raise InventoryScopeError("current_network_unavailable")
+            try:
+                network, source = client_network(
+                    row["id"], ip, self.networks, references, current_network
+                )
+            except InventoryScopeError:
+                if current_network is not None:
+                    required_current.add(mac)
+                raise
             connected_at = None
             if row.get("connectedAt"):
                 try:

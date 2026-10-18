@@ -156,16 +156,20 @@ class SimpliFiCoordinator(DataUpdateCoordinator):
             if claim:
                 self.start_dns()
             success = True
-        except SimpliFiError, TimeoutError:
+        except (SimpliFiError, TimeoutError) as err:
             if self.closing:
                 raise UpdateFailed("SimpliFi is stopping") from None
+            from .inventory import InventoryScopeError
+
             ir.async_create_issue(
                 self.hass,
                 DOMAIN,
                 self.issue_id,
                 is_fixable=False,
                 severity=ir.IssueSeverity.WARNING,
-                translation_key="sync_failed",
+                translation_key="inventory_scope_failed"
+                if isinstance(err, InventoryScopeError)
+                else "sync_failed",
             )
             raise UpdateFailed(
                 "SimpliFi sync failed; intent and ownership journal retained"
