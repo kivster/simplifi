@@ -67,7 +67,7 @@ def register_services(hass):
                             "Select an existing active, non-administrator Home Assistant user"
                         )
                 if action == "activity_history":
-                    from .history import page
+                    from .history import page, policy_change
 
                     query = {k: data[k] for k in ("before_id", "limit", "outcome") if k in data}
                     if "change_id" in data:
@@ -88,20 +88,7 @@ def register_services(hass):
                             raise SimpliFiError(
                                 "This change is no longer retained; open all history"
                             )
-                        if (
-                            "dns_revision" in change
-                            or "access_revision" in change
-                            or change["outcome"]
-                            not in (
-                                "pending",
-                                "applying",
-                                "applied",
-                                "failed",
-                                "partial",
-                                "superseded",
-                                "saved_management_disabled",
-                            )
-                        ):
+                        if not policy_change(change):
                             raise SimpliFiError("This action does not have policy sync results")
                         result = await coordinator.storage.history.for_change(change, **query)
                         attributed = [result["change"]]
@@ -111,7 +98,10 @@ def register_services(hass):
                         async with coordinator.engine.lock:
                             result = page(coordinator.engine.state.changes, **query)
                         attributed = result["items"]
+                    evidence = await coordinator.storage.history.summaries(attributed)
                     for row in attributed:
+                        if row["id"] in evidence:
+                            row["sync_evidence"] = evidence[row["id"]]
                         row.pop("digest", None)
                         row.pop("request_id", None)
                         user = await hass.auth.async_get_user(row["actor"])

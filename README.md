@@ -42,7 +42,7 @@ HACS manages release checks and installation. The Activity view shows the instal
 
 ## Interpreting status
 
-Saved intent, gateway readback and a successful test on a device are different kinds of evidence. A confirmed policy does not prove that every application or traffic path is blocked. DNS observations originate from Home Assistant; they are not tests from a child's device.
+Saved intent, gateway readback and a successful test on a device are different kinds of evidence. Person cards show always-on/all-day rules with named targets and device coverage; Activity preserves original attempt outcomes alongside later readback. See [rule and activity status](docs/rule-status.md). A confirmed policy does not prove that every application or traffic path is blocked. DNS observations originate from Home Assistant; they are not tests from a child's device.
 
 Home Assistant must be running to reconcile changes and end temporary allowances. During an outage, the gateway retains its last applied policies; an allowance can outlast its deadline. Other UniFi policies and independent Home Assistant controls can also affect access.
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.20.0b1 — 2026-10-18
+
+- Show always-on and today's all-day restrictions on person/shared-device cards and scoped access cards, with named targets, explicit unknown IDs, device coverage and confirmed/lifted/stale states. Keep them out of the timed clock rows.
+- Keep person and network option scopes explicit; read-only accounts receive status without controls.
+- Show cached later readback for each saved revision on Activity and change-history rows while preserving original failed attempts. Unrelated revisions, newer failed runs and incomplete metadata cannot supply confirmation.
+- No policy planning, stored outcomes, ownership receipts or household dashboard layout changes.
+
 ## 0.19.0b2 — 2026-10-18
 
 - Identify gateways by an exact, unique MAC match in the existing site-matched HA UniFi device cache when the official API omits the gateway feature and reports a WAN address. This does not issue another controller request or infer roles from product names.

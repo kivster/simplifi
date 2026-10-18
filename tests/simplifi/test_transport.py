@@ -172,6 +172,7 @@ async def test_http_and_websocket_deny_missing_grants_and_admin_data(entry, tran
     await t.grant()
     for action in (
         "dashboard_data",
+        "activity_history",
         "list_access_grants",
         "access_users",
         "preview_recovery",
@@ -182,6 +183,65 @@ async def test_http_and_websocket_deny_missing_grants_and_admin_data(entry, tran
         denied = await t.ws(action)
         assert not denied["success"]
     assert entry.runtime_data.engine.state.revision == before
+
+
+@pytest.mark.parametrize("transport", ["rest", "ws"])
+async def test_rule_and_later_readback_projections_are_authenticated_cached_and_nonmutating(
+    entry, transports, transport
+):
+    from copy import deepcopy
+
+    from homeassistant.helpers.update_coordinator import UpdateFailed
+
+    coordinator = entry.runtime_data
+    engine = coordinator.engine
+
+    async def command(action, **data):
+        return await engine.command(action, data, transports.admin.id, administrator=True)
+
+    await command(
+        "assign_device", device_id=next(iter(engine.state.devices)), group_id="demo-family"
+    )
+    await command("set_management", enabled=True)
+    await command(
+        "upsert_rule",
+        rule_id="app",
+        name="Chosen app",
+        kind="application",
+        groups=["demo-family"],
+        targets=[123],
+    )
+    change = await command("pause_internet", group_id="demo-family", duration_minutes=30)
+    engine.gateway.failure = "inventory"
+    with pytest.raises(UpdateFailed):
+        await coordinator._async_update_data()
+    assert next(c for c in engine.state.changes if c["id"] == change["id"])["outcome"] == "failed"
+    await coordinator._async_update_data()
+    await transports.grant()
+    before = deepcopy(engine.state.to_dict())
+    history_before = deepcopy(coordinator.storage.history.data)
+    policies = deepcopy(engine.gateway.policies)
+
+    async def response(action, principal="admin", **data):
+        ok, result = await transports.call(transport, action, principal, **data)
+        assert ok, result
+        return result["response"] if transport == "ws" else result["service_response"]
+
+    data = await response("dashboard_data")
+    row = next(c for c in data["changes"] if c["id"] == change["id"])
+    assert row["outcome"] == "failed" and row["sync_evidence"]["latest_confirmed"]
+    assert row["sync_evidence"]["revision"] == change["revision"]
+    data = await response("activity_history", kind="changes")
+    row = next(c for c in data["items"] if c["id"] == change["id"])
+    assert row["outcome"] == "failed" and row["sync_evidence"]["latest_confirmed"]
+    data = await response("access_status", "delegate")
+    row = data["groups"][0]["rule_rows"][0]
+    assert row["targets"][0]["name"] == "Demo chat" and row["state"] == "restricted"
+    assert "devices" not in data
+    denied, _ = await transports.call(transport, "activity_history", "delegate")
+    assert not denied
+    assert engine.state.to_dict() == before and coordinator.storage.history.data == history_before
+    assert engine.gateway.policies == policies
 
 
 @pytest.mark.parametrize("transport", ["rest", "ws"])

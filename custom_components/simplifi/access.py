@@ -162,7 +162,9 @@ def authorize(state, action, payload, actor, now):
     return grant
 
 
-def status(state, actor, now, *, confirmed=False):
+def status(state, actor, now, *, confirmed=False, gateway=None):
+    from .rule_summary import labels, summary, target_labels
+
     grant = grant_for(state, actor, now)
     groups = groups_for(state, grant)
     networks = set(grant["networks"])
@@ -170,6 +172,7 @@ def status(state, actor, now, *, confirmed=False):
         r for r in state.rules.values() if set(r.groups) & groups or set(r.networks) & networks
     ]
     visible_rules = {r.id for r in rules}
+    catalogue_labels = labels(gateway)
     fresh = bool(
         state.inventory_complete
         and state.last_observed
@@ -187,6 +190,11 @@ def status(state, actor, now, *, confirmed=False):
         row["confirmed"] = fresh and confirmed
         row["control_state"] = row["state"]
         row["unblock"] = unblock_summary(state, g.id, now)
+        row.update(
+            summary(
+                state, g.id, now, row["confirmed"], catalogue_labels, visible_rules=visible_rules
+            )
+        )
         if not row["confirmed"]:
             row["state"] = "unknown"
         group_rows.append({"id": g.id, "name": g.name, "kind": g.kind, **row})
@@ -226,6 +234,7 @@ def status(state, actor, now, *, confirmed=False):
         "rules": [
             {
                 **asdict(r),
+                "target_names": [t["name"] for t in target_labels(r, catalogue_labels)],
                 "groups": [g for g in r.groups if g in groups],
                 "networks": [n for n in r.networks if n in networks],
                 "whole_rule_control": grant["scope"] != "read_only"
