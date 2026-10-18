@@ -2,6 +2,7 @@
   "domain": "family_network",
   "name": "SimpliFi",
   "after_dependencies": [
+    "logbook",
     "unifi"
   ],
   "codeowners": [

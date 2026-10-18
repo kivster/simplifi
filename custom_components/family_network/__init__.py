@@ -4,6 +4,7 @@ import logging
 from typing import Any
 
 from homeassistant.exceptions import ConfigEntryNotReady
+from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .api.simulator import FakeGateway
@@ -16,6 +17,7 @@ from .services import register_services
 from .storage import HouseholdStorage
 
 LOGGER = logging.getLogger(__name__)
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
 
 async def async_setup(hass, config):
