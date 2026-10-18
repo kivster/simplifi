@@ -1,6 +1,7 @@
 """Rule intent switches reuse the same backend authenticated admission path."""
 
 from homeassistant.components.switch import SwitchEntity
+from homeassistant.const import EntityCategory
 from homeassistant.exceptions import ServiceValidationError
 
 from .entity import SimpliFiEntity, dynamic_setup
@@ -9,6 +10,9 @@ from .permissions import admitted_user
 
 
 class SimpliFiRuleSwitch(SimpliFiEntity, SwitchEntity):
+    # Policy configuration must not join HA's automatically exposed device controls.
+    _attr_entity_category = EntityCategory.CONFIG
+
     @property
     def is_on(self):
         rule = self.state_model.rules.get(self.key.removeprefix("rule:"))

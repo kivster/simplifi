@@ -9,7 +9,7 @@ For storage-managed Lovelace resources, integration setup registers the card and
 If your resources are configured in YAML, add the returned `resource` URL with `type: module`. Remove the previous resource entry for this card, if present, to avoid loading two versions. The bundled URL for this release is:
 
 ```yaml
-url: /simplifi_static/simplifi-card.js?v=0.21.0b1
+url: /simplifi_static/simplifi-card.js?v=0.21.1b1
 type: module
 ```
 
