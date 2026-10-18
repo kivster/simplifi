@@ -9,6 +9,26 @@ from pathlib import Path
 from .models import CapabilityError, SimpliFiError
 
 
+class InventoryScopeError(CapabilityError):
+    """A complete observation could not establish current client scope."""
+
+    def __init__(self, reason: str):
+        self.reason = reason
+        super().__init__(
+            {
+                "network_subnet_disagreement": (
+                    "Current connection and IP subnet disagree; scoped discovery is incomplete"
+                ),
+                "unmapped_network": (
+                    "Unmapped or ambiguous client network; scoped discovery is incomplete"
+                ),
+                "current_network_unavailable": (
+                    "Current connection evidence disappeared after a conflict; scoped discovery is incomplete"
+                ),
+            }[reason]
+        )
+
+
 def network_subnets(detail: dict) -> list[str]:
     """Use explicit configured subnets only; never infer a delegated IPv6 prefix."""
     result = []
@@ -65,18 +85,14 @@ def client_network(
     ]
     if current is not None:
         if current not in networks or (matches and current not in matches):
-            raise CapabilityError(
-                "Current connection and IP subnet disagree; scoped discovery is incomplete"
-            )
+            raise InventoryScopeError("network_subnet_disagreement")
         # An explicit current connection resolves absent or overlapping subnets.
         source = "subnet_and_current_network_id" if len(matches) == 1 else "current_network_id"
         if direct and direct != [current]:
             source += "_reference_differs"
         return current, source
     if len(matches) != 1:
-        raise CapabilityError(
-            "Unmapped or ambiguous client network; scoped discovery is incomplete"
-        )
+        raise InventoryScopeError("unmapped_network")
     network = matches[0]
     source = (
         "subnet_and_reference"

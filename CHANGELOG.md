@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.20.1b1 — 2026-10-18
+
+- Retry inconsistent device-network observations once with a complete fresh read, a one-second settling delay and a 30-second retry budget. Keep current-client reads adjacent to reduce avoidable skew.
+- Persistent disagreement, missing corroboration after a conflict, malformed data and incomplete reads still freeze policy writes and retain saved settings, assignments and ownership evidence.
+- Add identifier-free discovery attempt diagnostics and a specific repair warning for persistent device-network conflicts. Policy drift and uncertain writes retain their existing recovery safeguards.
+
 ## 0.20.0b1 — 2026-10-18
 
 - Show always-on and today's all-day restrictions on person/shared-device cards and scoped access cards, with named targets, explicit unknown IDs, device coverage and confirmed/lifted/stale states. Keep them out of the timed clock rows.

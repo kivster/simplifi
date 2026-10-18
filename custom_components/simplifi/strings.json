@@ -233,6 +233,10 @@
     "sync_failed": {
       "title": "SimpliFi sync could not be confirmed",
       "description": "Intent and ownership journal were retained. Inspect integration diagnostics. An uncertain create or an externally edited policy freezes the writer; review operation evidence before recovery. Temporary allowances may outlast deadlines while HA is down."
+    },
+    "inventory_scope_failed": {
+      "title": "SimpliFi device networks could not be confirmed",
+      "description": "UniFi returned conflicting or incomplete device-network information, and one complete fresh read could not resolve it. Saved settings, assignments and ownership evidence were retained; this failed discovery made no policy writes. Inspect integration diagnostics for the discovery attempts. SimpliFi retries automatically and clears this warning after a complete confirmed sync."
     }
   }
 }

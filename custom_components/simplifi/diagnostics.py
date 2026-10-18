@@ -9,6 +9,7 @@ async def async_get_config_entry_diagnostics(hass, entry):
     health = entry.runtime_data.gateway_health.snapshot()
     return {
         "simulation": entry.data["simulation"],
+        "discovery_readback": getattr(engine.gateway, "discovery_readback", None),
         "inventory_readback": engine.gateway.current_network_reader.snapshot(engine.clock())
         if getattr(engine.gateway, "current_network_reader", None)
         else None,

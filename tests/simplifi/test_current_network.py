@@ -225,7 +225,7 @@ async def test_discovery_maps_ipv6_only_and_addressless_clients_and_preserves_of
     with patch("custom_components.simplifi.api.unifi.registrant_database", return_value={}):
         assert (await gateway.discover())[0].network_source == "subnet_observation"
     row.pop("ipAddress")
-    gateway.pages.side_effect = [[row], []]
+    gateway.pages.side_effect = [[row], [], [row], []]
     with patch("custom_components.simplifi.api.unifi.registrant_database", return_value={}):
         with pytest.raises(CapabilityError):
             await gateway.discover()
