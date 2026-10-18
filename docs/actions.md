@@ -52,6 +52,10 @@ Automatic HA triggers do not carry an authenticated user ID; even manually trigg
 
 For an authorised external agent, use its own existing HA account and an explicit bounded SimpliFi grant. Avoid administrator accounts for routine controls. Leave voice/AI exposure off unless it is deliberately configured and tested. A SimpliFi grant applies to this integration; it cannot restrict that account's independent HA permissions or other UniFi integrations.
 
+Rule switches are HA configuration entities, so they do not join automatic exposure to Assist, Alexa or Google Assistant. An existing per-entity HA exposure choice is preserved. Earlier releases may already have a cached exposure setting: review **Settings → Voice assistants → Expose** after upgrading and remove any unwanted SimpliFi rule switches. See [HA's exposure controls](https://www.home-assistant.io/voice_control/voice_remote_expose_devices/).
+
+Deliberately exposing a switch does not grant permission to change it. The request still needs an active authenticated HA user and current SimpliFi permission. A voice or LLM route that supplies no user context is rejected. Exposure alone does not make such a route supported; use and test the documented authenticated action path.
+
 ## Responses, errors and confirmation
 
 A write normally returns a change record containing `id`, `revision`, authenticated `actor`, `action`, targets, `requested_at`, reason and `outcome`. `pending` means intent was saved for reconciliation; it does not mean the gateway or a child's device has confirmed the effect. Management-disabled changes save intent without enforcing it. DNS checks and access edits use separate outcomes/revisions; read actions return their documented result shape. Request a service response when calling an action, and use a `response_variable` in a native script.
