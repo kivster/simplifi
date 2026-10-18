@@ -1,0 +1,38 @@
+name: Native recovery drill
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - tools/simplifi/recovery_*.py
+      - tools/simplifi/requirements-recovery.txt
+      - .github/workflows/recovery.yml
+
+permissions:
+  contents: read
+
+jobs:
+  recovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: tools/simplifi/requirements-recovery.txt
+      - run: python -m pip install -r tools/simplifi/requirements-recovery.txt
+      - name: Download exact public release archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download v0.20.1b1 --repo kivster/simplifi --pattern simplifi.zip --dir /tmp/simplifi-previous
+          gh release download v0.21.0b1 --repo kivster/simplifi --pattern simplifi.zip --dir /tmp/simplifi-current
+      - name: Native cold update, restore and rollback
+        run: |
+          python tools/simplifi/recovery_drill.py \
+            --previous-archive /tmp/simplifi-previous/simplifi.zip \
+            --previous-sha256 39075824353780ccc21206e5057b4fdd6374c9098464a7457b4316418df8d34e \
+            --current-archive /tmp/simplifi-current/simplifi.zip \
+            --current-sha256 c33405e314791c324158065856f67d93c2b108f8a1fb91063c61e3e9514efc50
