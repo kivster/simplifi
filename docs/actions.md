@@ -11,7 +11,7 @@ Open **Developer tools → Actions** and select a `simplifi` action. Its form do
 | Pause a person's internet | `simplifi.pause_internet` | `group_id` plus one timing choice; adds a manual pause and cancels that person's internet allowance. |
 | Resume a manual pause | `simplifi.resume_internet` | `group_id`; other scheduled and content restrictions can still block access. |
 | Extend a timed pause | `simplifi.extend_pause` | `group_id`, `duration_minutes`; adds minutes to its stored deadline. |
-| Allow internet temporarily | `simplifi.allow_internet` | `group_id` plus one timing choice; lifts captured managed internet restrictions, preserving content rules and external filters. |
+| Allow internet temporarily | `simplifi.allow_internet` | `group_id` plus one timing choice; replaces the manual pause and lifts captured managed internet restrictions, preserving content rules and external filters. |
 | Return to the internet schedule | `simplifi.end_allowance` | `group_id`; ends the internet allowance. |
 | Lift a person's assigned rules together | `simplifi.unblock_group` | `group_id` plus one timing choice; see timing below. |
 | End or extend those lifts | `simplifi.end_group_unblock`, `simplifi.extend_group_unblock` | `group_id`; extension also requires `duration_minutes`. |
