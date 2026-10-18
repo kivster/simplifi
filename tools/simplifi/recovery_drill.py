@@ -7,6 +7,7 @@ No production credentials, controllers or Home Assistant instances are used.
 import argparse
 import hashlib
 import json
+import re
 import shutil
 import socket
 import stat
@@ -67,8 +68,12 @@ def run_phase(root, phase):
             timeout=90,
             check=False,
         )
-    assert result.returncode == 0, f"{phase} failed ({result.returncode}); inspect {log.name}"
-    assert " ERROR " not in Path(log.name).read_text(), f"HA setup error; inspect {log.name}"
+    output = Path(log.name).read_text()
+    setup_error = re.search(r"^(?:.*\bERROR \(|ERROR:)", output, re.MULTILINE)
+    if result.returncode != 0 or setup_error:
+        # The fixture contains fictional data only. Never upload its auth store/archive.
+        print(output[-12_000:], file=sys.stderr)
+        raise AssertionError(f"{phase} failed ({result.returncode}); inspect {log.name}")
     print(f"Passed cold phase: {phase}", flush=True)
     if phase == "request-restore":
         return None
@@ -110,7 +115,7 @@ def same_state(before, after):
         "binding_token",
     ):
         assert before["state"][field] == after["state"][field], f"State changed: {field}"
-    for field in ("entry", "export", "gateway", "entities", "users"):
+    for field in ("entry", "entry_data", "export", "gateway", "entities", "users"):
         assert before[field] == after[field], f"Identity/configuration changed: {field}"
     for field in ("dashboards", "household", "unrelated"):
         assert before["ui"][field] == after["ui"][field], f"Dashboard changed: {field}"
@@ -218,6 +223,7 @@ def main():
             "history retention",
             "customized and unrelated dashboards",
             "versioned resource identity",
+            "served card bytes match the selected release",
             "no duplicate simulated policy creation",
         ],
         "limits": [

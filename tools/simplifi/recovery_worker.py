@@ -6,6 +6,7 @@
 
 import asyncio
 import fcntl
+import hashlib
 import ipaddress
 import json
 import os
@@ -67,7 +68,7 @@ from homeassistant.runner import RuntimeConfig, create_event_loop, ensure_single
 
 import custom_components.simplifi as component
 from custom_components.simplifi.api.simulator import FakeGateway
-from custom_components.simplifi.const import VERSION
+from custom_components.simplifi.const import CARD_RESOURCE, VERSION
 
 gateway_file = root / "gateway.json"
 gateway_data = json.loads(gateway_file.read_text()) if gateway_file.exists() else None
@@ -127,6 +128,16 @@ async def native_ui(hass, user_id):
     port = settings["http"]["server_port"]
     try:
         async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"http://127.0.0.1:{port}{CARD_RESOURCE}",
+                headers={"Authorization": f"Bearer {token}"},
+            ) as response:
+                assert response.status == 200
+                served = await response.read()
+                installed = await asyncio.to_thread(
+                    (config / "custom_components/simplifi/frontend/simplifi-card.js").read_bytes
+                )
+                assert hashlib.sha256(served).digest() == hashlib.sha256(installed).digest()
             async with session.ws_connect(f"http://127.0.0.1:{port}/api/websocket") as ws:
                 assert (await ws.receive_json())["type"] == "auth_required"
                 await ws.send_json({"type": "auth", "access_token": token})
@@ -170,6 +181,13 @@ async def main():
                 data={"simulation": True, "verify_ssl": True},
             )
             assert flow["type"] == "create_entry", flow
+            await hass.async_block_till_done()
+            # A fictional credential marker verifies native entry-data preservation.
+            # Simulation remains mandatory; this value cannot authenticate anywhere.
+            hass.config_entries.async_update_entry(
+                flow["result"],
+                data={**flow["result"].data, "api_key": "lab-not-a-real-credential"},
+            )
             await hass.async_block_till_done()
             await asyncio.to_thread(
                 write_json,
@@ -352,6 +370,7 @@ async def main():
             "phase": phase,
             "version": VERSION,
             "entry": entry.entry_id,
+            "entry_data": dict(entry.data),
             "state": engine.state.to_dict(),
             "export": await action("export_configuration"),
             "gateway": {"policies": engine.gateway.policies, "counter": engine.gateway.counter},
