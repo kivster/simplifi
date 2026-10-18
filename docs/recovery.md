@@ -49,4 +49,10 @@ The hashes bind this example to those two exact release assets. Obtain hashes in
 
 The printed temporary directory retains the fictional configuration, archive, phase logs and a `report.json` on success. A failed phase exits nonzero and leaves evidence for inspection. These files are not uploaded by the workflow. The [Native recovery drill workflow](../.github/workflows/recovery.yml) runs the same script on Linux.
 
+## Recorded acceptance
+
+The [2026-10-18 Linux run](https://github.com/kivster/simplifi/actions/runs/39165326601) passed all 11 cold-process phases on Ubuntu 24.04, Python 3.14.8 and HA Core 2026.10.1. It tested the exact `0.20.1b1` → `0.21.0b1` release archives above, native Core restore, rollback to `0.20.1b1` and re-upgrade. The tested tooling commit is `698c5907c56fb9bf986b191d425a31a820578b09`.
+
+All saved-state and ownership comparisons passed, including the fictional credential marker, HA account grants, both temporary controls, retained request identity, entity IDs, customized/unrelated dashboards and history. Every served card matched the selected archive's bytes. No duplicate simulated policy creation occurred. This evidence applies to that compatible release pair; it does not establish compatibility with arbitrary older versions.
+
 This is a Core configuration recovery test with the recorder database excluded. Integration files come from release archives directly: the HACS UI and its install/update flow are a separate test. It does not prove HAOS/Supervisor/App restoration, real controller outage behaviour, physical-client traffic or Companion/Watch behaviour.
