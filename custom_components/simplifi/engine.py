@@ -620,7 +620,9 @@ class Engine:
                     and e.rule == rule
                     and (
                         e.kind in ("pause", "internet_allow")
-                        if kind in ("pause", "internet_allow")
+                        if kind == "pause"
+                        else e.kind == "internet_allow"
+                        if kind == "internet_allow"
                         else e.kind in ("suspension", "rule_allow")
                     )
                 )

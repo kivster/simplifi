@@ -510,10 +510,10 @@ async def test_published_script_examples_execute_with_authenticated_identity_and
         groups=["demo-family"],
     )
     assert code == 200
-    for script, kind in [
-        ("simplifi_pause_30_minutes", "pause"),
-        ("simplifi_resume_manual_pause", None),
-        ("simplifi_allow_30_minutes", "internet_allow"),
+    for script, kinds in [
+        ("simplifi_pause_30_minutes", {"pause"}),
+        ("simplifi_allow_30_minutes", {"pause", "internet_allow"}),
+        ("simplifi_resume_manual_pause", {"internet_allow"}),
     ]:
         result = await t.ws(script, "member", domain="script", response=True)
         assert result["success"], result
@@ -523,11 +523,11 @@ async def test_published_script_examples_execute_with_authenticated_identity_and
         assert timedelta(0) < validity - engine.clock() <= timedelta(seconds=61)
         await hass.async_block_till_done()
         records = list(engine.state.exceptions.values())
-        if kind:
-            assert len(records) == 1 and records[0].kind == kind
-            assert instant(records[0].expires_at) > validity + timedelta(minutes=28)
-        else:
-            assert not records and engine.state.rules["bedtime"].enabled
+        assert {record.kind for record in records} == kinds
+        assert all(
+            instant(record.expires_at) > validity + timedelta(minutes=28) for record in records
+        )
+        assert engine.state.rules["bedtime"].enabled
     # The provided shortcut cannot grant control after its user's access is revoked.
     code, _ = await t.rest("revoke_access_grant", "admin", user_id=member.id, confirm=True)
     assert code == 200

@@ -44,5 +44,5 @@ simplifi_allow_30_minutes:
         request_expires_at: "{{ (now() + timedelta(seconds=60)).isoformat() }}"
         reason: Requested from the internet allowance shortcut
       response_variable: saved_change
-    - stop: Saved a temporary internet allowance; content rules remain
+    - stop: Saved a temporary internet allowance; a manual pause and content rules remain
       response_variable: saved_change

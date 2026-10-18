@@ -11,7 +11,7 @@ Open **Developer tools → Actions** and select a `simplifi` action. Its form do
 | Pause a person's internet | `simplifi.pause_internet` | `group_id` plus one timing choice; adds a manual pause and cancels that person's internet allowance. |
 | Resume a manual pause | `simplifi.resume_internet` | `group_id`; other scheduled and content restrictions can still block access. |
 | Extend a timed pause | `simplifi.extend_pause` | `group_id`, `duration_minutes`; adds minutes to its stored deadline. |
-| Allow internet temporarily | `simplifi.allow_internet` | `group_id` plus one timing choice; replaces the manual pause and lifts captured managed internet restrictions, preserving content rules and external filters. |
+| Allow internet temporarily | `simplifi.allow_internet` | `group_id` plus one timing choice; leaves the manual pause in place and lifts captured managed internet restrictions, preserving content rules and external filters. |
 | Return to the internet schedule | `simplifi.end_allowance` | `group_id`; ends the internet allowance. |
 | Lift a person's assigned rules together | `simplifi.unblock_group` | `group_id` plus one timing choice; see timing below. |
 | End or extend those lifts | `simplifi.end_group_unblock`, `simplifi.extend_group_unblock` | `group_id`; extension also requires `duration_minutes`. |
@@ -29,6 +29,8 @@ Household editing, discovery, DNS, connection, access grants, import/export and 
 ## Timing and command validity
 
 For timed controls choose exactly one of `duration_minutes` (1–10080), a timezone-aware ISO `expires_at`, `next_window_end: true` where supported, or `indefinite: true`. `expires_at` is the **control's end time**. Omitted timing uses that action's default; specify it in a shortcut to avoid ambiguity. Extension actions require a minute duration.
+
+A manual pause takes precedence over an internet allowance. Resume removes that pause; any still-active allowance can then apply for its remaining time. A timed pause can also end at its own deadline. A new pause cancels the internet allowance, and later resuming cannot revive that cancelled allowance.
 
 The default internet allowance captures restrictions active when requested; a later unrelated rule still applies. Default group unblocking lifts currently active assigned rules until each window ends, and always-on rules until ended. An explicit group-unblock duration/time also covers that person's currently assigned enabled rules whose windows start later; subsequently added rules still apply. Quarantine and rule suspension can remain paused indefinitely unless a deadline is supplied. Review the dashboard before choosing an indefinite allowance.
 
