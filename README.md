@@ -16,6 +16,7 @@ SimpliFi brings people, shared devices, internet schedules and filtering control
 - Read network protection and other UniFi policies where the controller exposes them; show uncertain or stale observations explicitly.
 - Run optional DNS observations from Home Assistant, with scheduled checks and retained results.
 - Provide scoped access for existing Home Assistant accounts, activity history, configuration export/import and gateway recovery tools.
+- Inspect gateway and access-point CPU, memory, load and uptime on demand, alongside this integration's controller request counts. Routine dashboard polling does not fetch these statistics.
 - Try the dashboard using an offline simulator before enabling gateway management.
 
 The dashboard has Family, Devices, Rules, Filtering and Activity views. Its Lovelace card is bundled with the integration. No additional server or container is required.

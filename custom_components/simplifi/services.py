@@ -121,6 +121,12 @@ def register_services(hass):
                     from .presentation import dashboard_data
 
                     return await dashboard_data(hass, entry)
+                if action == "gateway_health":
+                    return (
+                        await coordinator.gateway_health.read()
+                        if data["refresh"]
+                        else coordinator.gateway_health.snapshot()
+                    )
                 if action == "dashboard_catalogue":
                     from .presentation import dashboard_catalogue
 

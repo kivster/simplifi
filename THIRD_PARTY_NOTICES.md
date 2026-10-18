@@ -15,6 +15,7 @@ The MIT license covers the project's importer and code, not IEEE trademarks or r
 Runtime dependencies are installed by Home Assistant or its Python dependency manager; their source is not vendored here:
 
 - Home Assistant — Apache-2.0: https://github.com/home-assistant/core/blob/dev/LICENSE.md
+- aiounifi — MIT, provided by the optional HA UniFi Network integration: https://github.com/Kane610/aiounifi/blob/master/LICENSE
 - aiohttp — Apache-2.0 AND MIT: https://github.com/aio-libs/aiohttp/blob/master/LICENSE.txt
 - probatio — MIT: https://github.com/frenck/probatio
 - dnspython — ISC: https://github.com/rthalley/dnspython/blob/main/LICENSE

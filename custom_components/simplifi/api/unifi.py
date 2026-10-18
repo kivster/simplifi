@@ -19,6 +19,7 @@ from ..inventory import (
     registrant_database,
 )
 from ..models import CapabilityError, Device, SimpliFiError, instant, mac_address, utcnow
+from ..request_meter import MeteredSession, RequestMeter
 
 
 def external_zone_id(zones: list[dict]) -> str:
@@ -96,6 +97,7 @@ class UniFiGateway:
         }
         self.version = "unknown"
         self.legacy_site = None
+        self.request_meter = RequestMeter()
 
     @property
     def site_path(self):
@@ -104,9 +106,10 @@ class UniFiGateway:
     async def request(self, method: str, path: str, body=None, params=None):
         url = f"{self.controller}/proxy/network/integration{path}"
         attempts = 3 if method == "GET" else 1
+        transport = MeteredSession(self.session, self.request_meter)
         for attempt in range(attempts):
             try:
-                async with self.session.request(
+                async with transport.request(
                     method,
                     url,
                     headers={"X-API-Key": self.api_key, "Accept": "application/json"},
@@ -121,30 +124,32 @@ class UniFiGateway:
                         and method == "GET"
                         and attempt < attempts - 1
                     ):
-                        await asyncio.sleep(2**attempt)
-                        continue
-                    if response.status == 401:
+                        pass
+                    elif response.status == 401:
                         raise SimpliFiError(
                             "UniFi rejected the API key (HTTP 401). Use the complete key created "
                             "in this console's local Integrations page"
                         )
-                    if response.status == 403:
+                    elif response.status == 403:
                         raise SimpliFiError(
                             "UniFi denied access (HTTP 403). Check this key's Network "
                             "application and site permissions"
                         )
-                    if not 200 <= response.status < 300:
+                    elif not 200 <= response.status < 300:
                         raise SimpliFiError(
                             f"Gateway HTTP {response.status}; response body withheld"
                         )
                     # UniFi 10.6.106 documents DELETE policy success as a bodyless
                     # 200. The reconciler still verifies absence with a full read.
-                    if response.status == 204 or (method == "DELETE" and response.status == 200):
+                    elif response.status == 204 or (method == "DELETE" and response.status == 200):
                         return None
-                    try:
-                        return await response.json()
-                    except ValueError, aiohttp.ContentTypeError:
-                        raise SimpliFiError("Malformed gateway response") from None
+                    else:
+                        try:
+                            return await response.json()
+                        except ValueError, aiohttp.ContentTypeError:
+                            raise SimpliFiError("Malformed gateway response") from None
+                # Backoff is outside the measured HTTP exchange and releases its response.
+                await asyncio.sleep(2**attempt)
             except aiohttp.ClientConnectorCertificateError:
                 raise SimpliFiError(
                     "The controller's HTTPS certificate could not be verified. Check its "

@@ -147,6 +147,7 @@ SPECS: dict[str, dict[Any, Any]] = {
         vol.Optional("presentation", default="enhanced"): vol.In(["enhanced", "native"]),
     },
     "dashboard_data": {},
+    "gateway_health": {vol.Optional("refresh", default=False): bool},
     "dashboard_catalogue": {
         vol.Required("kind"): vol.In(["category", "application"]),
         vol.Optional("query", default=""): vol.All(str, vol.Length(max=100)),
