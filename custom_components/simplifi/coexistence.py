@@ -8,7 +8,7 @@ from typing import Any
 
 from .const import STALE_SECONDS
 from .models import SimpliFiError, instant, mac_address
-from .planner import policy_fingerprint
+from .planner import policy_matches
 from .unifi_source import matching_unifi_entry
 
 MAX_POLICIES = 10000
@@ -438,7 +438,7 @@ class CoexistenceReader:
             row["ownership"] = (
                 (
                     "managed"
-                    if policy_fingerprint(self.policies[key]) == record["fingerprint"]
+                    if policy_matches(self.policies[key], record["body"], record["fingerprint"])
                     else "drift"
                 )
                 if record

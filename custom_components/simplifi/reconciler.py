@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Protocol
 
 from .models import Conflict, SimpliFiError, State, uid
-from .planner import policy_fingerprint
+from .planner import policy_fingerprint, policy_matches
 
 
 class Gateway(Protocol):
@@ -43,14 +43,14 @@ class Reconciler:
             elif (
                 operation["action"] != "delete"
                 and current
-                and policy_fingerprint(current) == operation["fingerprint"]
+                and policy_matches(current, operation.get("body"), operation["fingerprint"])
             ):
                 state.owned[operation["key"]] = self._owned(state, operation, current, now)
                 operation["status"] = "verified"
             elif (
                 operation["action"] in ("update", "delete")
                 and current
-                and policy_fingerprint(current) == operation["pre_fingerprint"]
+                and policy_matches(current, operation["pre_image"], operation["pre_fingerprint"])
             ):
                 # A timed-out server request can still finish after this read.
                 # Seeing the pre-image is not evidence that the request ended.
@@ -65,7 +65,7 @@ class Reconciler:
             if (record["controller"], record["site"]) != (state.controller, state.site):
                 raise Conflict("Owned-policy record belongs to another controller")
             current = actual.get(record["id"])
-            if current and policy_fingerprint(current) != record["fingerprint"]:
+            if current and not policy_matches(current, record["body"], record["fingerprint"]):
                 raise Conflict("Owned policy was edited externally; refusing to overwrite")
         state.sync_status = "applying"
         await self.save(state)
@@ -76,13 +76,17 @@ class Reconciler:
             owned = state.owned.get(key)
             current = actual.get(owned["id"]) if owned else None
             body = desired.get(key)
+            if body is not None and current is not None and owned is not None:
+                # A recovered receipt can establish ownership after planning.
+                # Preserve its verified marker before deciding whether a PUT is needed.
+                body = {**body, "description": owned["body"].get("description", "")}
             if body is None and current is None:
                 state.owned.pop(key, None)
                 continue
             if (
                 body is not None
                 and current is not None
-                and policy_fingerprint(current) == policy_fingerprint(body)
+                and policy_matches(current, body, policy_fingerprint(body))
             ):
                 continue
             action = "delete" if body is None else "update" if current is not None else "create"
@@ -134,7 +138,7 @@ class Reconciler:
                     raise Conflict("Deletion not confirmed")
                 state.owned.pop(key, None)
             else:
-                if not confirmed or policy_fingerprint(confirmed) != operation["fingerprint"]:
+                if not policy_matches(confirmed, operation["body"], operation["fingerprint"]):
                     raise Conflict("Policy readback did not match requested fields")
                 state.owned[key] = self._owned(state, operation, confirmed, now)
             operation["status"] = "verified"

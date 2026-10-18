@@ -4,7 +4,7 @@ from copy import deepcopy
 from datetime import timedelta
 
 from .models import Conflict, SimpliFiError, fingerprint, instant
-from .planner import policy_fingerprint
+from .planner import policy_matches
 from .reconciler import Reconciler
 
 
@@ -24,7 +24,7 @@ def evidence(state, operation, actual, actor, now):
         for key, p in actual.items()
         if key not in known_ids
         and p.get("description") == marker
-        and policy_fingerprint(p) == operation["fingerprint"]
+        and policy_matches(p, operation.get("body"), operation["fingerprint"])
     ]
     marked = [p for p in actual.values() if p.get("description") == marker]
     lost_create = operation["action"] == "create" and not operation.get("returned_id")
@@ -41,8 +41,8 @@ def evidence(state, operation, actual, actor, now):
         and old_enough
         and current
         and owner.get("id") == policy_id
-        and owner.get("fingerprint") == operation["pre_fingerprint"]
-        and policy_fingerprint(current) == operation["pre_fingerprint"]
+        and policy_matches(operation["pre_image"], owner.get("body"), owner["fingerprint"])
+        and policy_matches(current, operation["pre_image"], operation["pre_fingerprint"])
     )
     return {
         "operation_id": operation["id"],
@@ -88,7 +88,7 @@ async def preview(state, gateway, actor, now, operation_id=None):
             "message": "Owned policy was edited externally. Review it in UniFi; recovery will not overwrite it.",
         }
         for key, r in state.owned.items()
-        if r["id"] in actual and policy_fingerprint(actual[r["id"]]) != r["fingerprint"]
+        if r["id"] in actual and not policy_matches(actual[r["id"]], r["body"], r["fingerprint"])
     ]
     return {
         "revision": state.revision,

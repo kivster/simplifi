@@ -1,6 +1,6 @@
 [project]
 name = "simplifi-ha"
-version = "0.18.0b2"
+version = "0.18.0b3"
 description = "Family internet controls for UniFi, made effortless via Home Assistant."
 requires-python = ">=3.14"
 license = "MIT"
