@@ -91,6 +91,58 @@ async def test_concurrent_readers_share_one_bounded_read_and_sort_reported_gatew
     assert all(v["devices"][0]["gateway"] for v in views)
 
 
+@pytest.mark.parametrize(
+    "matching,roles,expected",
+    [
+        (True, ["udm"], True),
+        (True, ["ugw"], True),
+        (True, ["uxg"], True),
+        (True, ["ucg"], True),
+        (True, ["usw"], False),
+        (True, ["udm", "usw"], False),
+        (False, ["udm"], False),
+    ],
+)
+async def test_gateway_role_uses_unique_cached_mac_on_exact_controller_and_site(
+    matching, roles, expected
+):
+    mac = "02:00:00:00:00:11"
+    reader, _, _ = health(
+        [
+            page([device(), device(2, name="Gateway", macAddress=mac, ipAddress="100.64.0.2")]),
+            STATS,
+            STATS,
+        ]
+    )
+    reader.gateway.legacy_site = "default"
+    native = SimpleNamespace(
+        devices=SimpleNamespace(
+            values=lambda: [SimpleNamespace(mac=mac, type=role) for role in roles]
+        ),
+        request=AsyncMock(side_effect=AssertionError("cached inventory must not fetch")),
+    )
+    entry = SimpleNamespace(
+        state=SimpleNamespace(name="LOADED"),
+        runtime_data=SimpleNamespace(
+            config=SimpleNamespace(
+                host="192.0.2.1", port=443, site="default" if matching else "other-site"
+            ),
+            api=native,
+        ),
+    )
+    reader.hass = SimpleNamespace(
+        config_entries=SimpleNamespace(async_entries=lambda domain: [entry])
+    )
+    view = await reader.read()
+    row = next(d for d in view["devices"] if d["name"] == "Gateway")
+    assert row["gateway"] is expected and not row["controller"]
+    assert row["gateway_source"] == ("ha_unifi_inventory" if expected else None)
+    if expected:
+        assert view["devices"][0]["name"] == "Gateway"
+    native.request.assert_not_awaited()
+    assert mac not in str(view)
+
+
 @pytest.mark.parametrize("value", [True, -1, 101, float("nan"), float("inf"), "50", 10**1000])
 def test_bad_cpu_samples_are_rejected(value):
     with pytest.raises(SimpliFiError):

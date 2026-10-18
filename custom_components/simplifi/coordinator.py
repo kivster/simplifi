@@ -53,7 +53,7 @@ class SimpliFiCoordinator(DataUpdateCoordinator):
         }
         self.protection = ProtectionReader(hass, engine.gateway)
         self.coexistence = CoexistenceReader(hass, engine.gateway)
-        self.gateway_health = GatewayHealth(engine.gateway, engine.clock)
+        self.gateway_health = GatewayHealth(engine.gateway, engine.clock, hass=hass)
 
     @callback
     def schedule_deadline(self, *, catch_up=False):

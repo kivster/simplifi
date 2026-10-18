@@ -275,7 +275,7 @@ async def test_dashboard_configuration_has_native_views_and_a_fallback(hass, ent
     enhanced = generate_from_registry(hass, entry)
     assert all(v["type"] == "sections" for v in enhanced["dashboard"]["views"])
     assert all("icon" not in v for v in enhanced["dashboard"]["views"])  # Labelled tabs.
-    assert enhanced["resource"].endswith("?v=0.19.0b1")
+    assert enhanced["resource"].endswith("?v=0.19.0b2")
     native = generate_from_registry(hass, entry, "native")
     assert "custom:simplifi-card" not in str(native["dashboard"])
 

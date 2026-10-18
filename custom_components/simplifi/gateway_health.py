@@ -8,7 +8,8 @@ from time import monotonic
 from urllib.parse import quote, urlsplit
 from uuid import UUID
 
-from .models import SimpliFiError, instant, utcnow
+from .models import SimpliFiError, instant, mac_address, utcnow
+from .unifi_source import matching_unifi_api
 
 MAX_DEVICES = 64
 COOLDOWN = 60
@@ -50,7 +51,33 @@ def statistics(raw):
     return {**values, "sampled_at": heartbeat}
 
 
-def overview(raw, controller):
+def cached_gateway_macs(hass, gateway):
+    """Use exact MAC matches from the existing, site-matched HA UniFi cache only."""
+    if hass is None:
+        return set()
+    try:
+        devices = list(matching_unifi_api(hass, gateway).devices.values())
+        if len(devices) > 10000:
+            return set()
+        roles: dict[str, list[str]] = {}
+        for device in devices:
+            try:
+                mac = mac_address(device.mac)
+                role = str(device.type)
+            except ValueError, TypeError, AttributeError, SimpliFiError:
+                continue
+            roles.setdefault(mac, []).append(role)
+        return {
+            mac
+            for mac, values in roles.items()
+            if len(values) == 1 and values[0] in {"udm", "ucg", "ugw", "uxg"}
+        }
+    except Exception:
+        # Cached role context is optional and never a source of policy ownership.
+        return set()
+
+
+def overview(raw, controller, gateway_macs=()):
     if not isinstance(raw, dict):
         raise SimpliFiError("Invalid device inventory")
     try:
@@ -68,19 +95,31 @@ def overview(raw, controller):
         or len(raw["features"]) != len(set(raw["features"]))
     ):
         raise SimpliFiError("Incomplete device inventory")
+    try:
+        address = raw.get("macAddress")
+        cached_gateway = isinstance(address, str) and mac_address(address) in gateway_macs
+    except ValueError, TypeError, AttributeError, SimpliFiError:
+        cached_gateway = False
+    official_gateway = "gateway" in raw["features"]
     return {
         "id": identity,
         "name": raw["name"],
         "model": raw["model"],
         "state": raw["state"],
-        "gateway": "gateway" in raw["features"],
+        "gateway": official_gateway or cached_gateway,
+        "gateway_source": "official_api"
+        if official_gateway
+        else "ha_unifi_inventory"
+        if cached_gateway
+        else None,
         "controller": str(ip) == urlsplit(controller).hostname,
     }
 
 
 class GatewayHealth:
-    def __init__(self, gateway, clock=utcnow, timer=monotonic):
+    def __init__(self, gateway, clock=utcnow, timer=monotonic, *, hass=None):
         self.gateway, self.clock, self.timer = gateway, clock, timer
+        self.hass = hass
         self.lock = asyncio.Lock()
         self.last_attempt = None
         self.last_read = None
@@ -169,6 +208,7 @@ class GatewayHealth:
     async def _inventory(self):
         rows: list[dict] = []
         total = None
+        gateway_macs = cached_gateway_macs(self.hass, self.gateway)
         while len(rows) < MAX_DEVICES:
             raw = await self.gateway.request(
                 "GET",
@@ -187,7 +227,7 @@ class GatewayHealth:
             ):
                 raise SimpliFiError("Incomplete device inventory page")
             total = raw["totalCount"]
-            rows.extend(overview(d, self.gateway.controller) for d in raw["data"])
+            rows.extend(overview(d, self.gateway.controller, gateway_macs) for d in raw["data"])
             if len({d["id"] for d in rows}) != len(rows):
                 raise SimpliFiError("Duplicate device inventory identity")
             if len(rows) == total:

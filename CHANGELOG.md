@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.19.0b2 — 2026-10-18
+
+- Identify gateways by an exact, unique MAC match in the existing site-matched HA UniFi device cache when the official API omits the gateway feature and reports a WAN address. This does not issue another controller request or infer roles from product names.
+- Label the cached role source, partial samples and dated timezone-aware sample times explicitly. Separate network-reference requests in the traffic meter.
+
 ## 0.19.0b1 — 2026-10-18
 
 - Add an administrator-only Gateway load dialog with on-demand device CPU, memory, load averages, uptime and timestamped sample freshness.

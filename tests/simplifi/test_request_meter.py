@@ -69,6 +69,10 @@ def test_window_counts_failures_concurrency_and_privacy_with_bounded_buckets():
 
 def test_known_routes_are_distinct_and_unknown_methods_cannot_become_labels():
     assert (
+        endpoint("/v1/sites/private/networks/private/references")
+        == "/v1/sites/{site}/networks/{id}/references"
+    )
+    assert (
         endpoint("/proxy/network/integration/v1/sites/secret/firewall/policies/ordering")
         == "/v1/sites/{site}/firewall/policies/ordering"
     )

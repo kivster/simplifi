@@ -26,6 +26,7 @@ _ROUTES = (
         r"/v1/sites/[^/]+/devices/[^/]+/statistics/latest",
         "/v1/sites/{site}/devices/{id}/statistics/latest",
     ),
+    (r"/v1/sites/[^/]+/networks/[^/]+/references", "/v1/sites/{site}/networks/{id}/references"),
     (r"(?:/proxy/network)?/api/s/[^/]+/rest/networkconf", "HA UniFi /rest/networkconf"),
     (r"(?:/proxy/network)?/api/s/[^/]+/stat/sta", "HA UniFi /stat/sta"),
     (r"(?:/proxy/network)?/v2/api/site/[^/]+/content-filtering", "HA UniFi /content-filtering"),
