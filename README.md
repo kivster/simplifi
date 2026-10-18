@@ -1,6 +1,6 @@
 # SimpliFi
 
-![SimpliFi](custom_components/family_network/brand/icon.png)
+![SimpliFi](custom_components/simplifi/brand/icon.png)
 
 **Family internet controls for UniFi, made effortless via Home Assistant.**
 
@@ -25,15 +25,15 @@ The dashboard has Family, Devices, Rules, Filtering and Activity views. Its Love
 Requires Home Assistant 2026.10.1 or later for the currently validated development environment, plus a compatible UniFi Network local Integration API. Live features depend on the controller's endpoints, permissions and firmware. Start with the simulator or observation mode to check compatibility.
 
 1. In HACS, add `https://github.com/kivster/simplifi` as a custom repository of type **Integration**.
-2. Download **SimpliFi** and restart Home Assistant.
+2. Enable beta releases for the repository, download **SimpliFi** and restart Home Assistant.
 3. Open **Settings → Devices & services → Add integration → SimpliFi**.
 4. Choose the simulator, or enter your local controller HTTPS origin and UniFi API key in the Home Assistant form. Select the managed networks, internet destination zone and household timezone.
-5. Create the dashboard using the `family_network.dashboard_configuration` action. See [dashboard setup](docs/dashboard.md).
+5. Create the dashboard using the `simplifi.dashboard_configuration` action. See [dashboard setup](docs/dashboard.md).
 6. Assign devices and review the selected scope before enabling management.
 
-For a manual installation, copy `custom_components/family_network` into your Home Assistant configuration directory and restart. The integration keeps this internal directory/domain for compatibility with existing installations.
+For a manual installation, copy `custom_components/simplifi` into your Home Assistant configuration directory and restart.
 
-Existing installations should follow [migration](docs/migration.md), including backup and rollback preparation.
+If replacing a prototype or an earlier beta with a different integration identity, follow [migration](docs/migration.md) before installing. This release uses the `simplifi` integration domain and requires a fresh setup in that case.
 
 ## Updates
 
@@ -47,15 +47,15 @@ Home Assistant must be running to reconcile changes and end temporary allowances
 
 ## Development
 
-Use Python 3.14 and the versions in `tests/family_network/requirements.txt`:
+Use Python 3.14 and the versions in `tests/simplifi/requirements.txt`:
 
 ```sh
-python -m pip install -r tests/family_network/requirements.txt
+python -m pip install -r tests/simplifi/requirements.txt
 python -m pytest -q
 python -m ruff check custom_components tests tools
 python -m ruff format --check custom_components tests tools
 python -m mypy
-node --test tests/family_network/*.test.mjs
+node --test tests/simplifi/*.test.mjs
 ```
 
 The code and original artwork use the [MIT license](LICENSE). See [third-party notices](THIRD_PARTY_NOTICES.md) and [release status](docs/release-status.md) for data sources and acceptance limitations.

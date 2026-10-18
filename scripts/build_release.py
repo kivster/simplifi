@@ -10,9 +10,7 @@ from validate_package import ROOT, validate
 def build():
     validate()
     paths = (
-        subprocess.check_output(
-            ["git", "ls-files", "-z", "custom_components/family_network"], cwd=ROOT
-        )
+        subprocess.check_output(["git", "ls-files", "-z", "custom_components/simplifi"], cwd=ROOT)
         .decode()
         .split("\0")
     )

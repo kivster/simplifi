@@ -1,16 +1,14 @@
-# Migrating an existing installation
+# Replacing an earlier installation
 
-This is the in-place migration plan for the beta release. Live household migration requires a verified backup and has not yet been accepted with this package.
+SimpliFi uses the `simplifi` integration domain, storage namespace and export format. This beta does not automatically migrate entries or policy ownership from a differently named prototype or the initial standalone beta. Installing it alongside an active predecessor can leave two independent policy managers.
 
-1. Finish or recover any active installation in the previous updater. Confirm that its scheduled updates and any external deployment job will no longer overwrite `custom_components/family_network` or reinstall the previous dashboard card.
-2. Take and verify a Home Assistant backup, including integration configuration, stored household state, policy ownership journal and history. Retain the previous integration files and dashboard resource URL for rollback.
-3. Install the reviewed SimpliFi release over the existing integration directory through HACS or the documented manual installation path. Do not delete and recreate the integration entry.
-4. Restart Home Assistant once. Confirm that the same entry, people, devices, rules, grants, history and policy ownership remain present.
-5. Inspect the Lovelace resource URL and reload the frontend. Storage resources for the existing card are migrated automatically. YAML resources require the change documented in [dashboard setup](dashboard.md).
-6. Check fresh gateway readback, policy counts and the activity history before testing a single explicitly selected device.
+1. Take and verify a Home Assistant backup. Retain the previous integration files and a household configuration export privately for recovery.
+2. Disable management in the previous integration. Review its policy ownership and use its own cleanup action to remove only the gateway policies it owns. Confirm that lifting those restrictions is acceptable and verify fresh controller readback.
+3. Remove the previous integration entry, its dedicated dashboard and its card resource through Home Assistant. Stop any previous updater or external deployment that could reinstall it, then remove its integration files. Keep unrelated UniFi integrations and policies.
+4. Add `kivster/simplifi` as an Integration custom repository in HACS, enable beta releases and download SimpliFi. Restart Home Assistant once when prompted.
+5. Add SimpliFi through **Settings → Devices & services**. Start in the simulator or observation mode, select the managed scope and recreate the household configuration. Exports carrying a different integration format are not directly accepted.
+6. Create the dashboard following [dashboard setup](dashboard.md). Assign devices, review the scope and enable management only when ready. Verify fresh gateway readback and test one explicitly selected device.
 
-The integration domain, service names, storage keys, custom element name and entity unique IDs remain `family_network`-based. Existing custom entry and dashboard titles are retained; rename them to SimpliFi through Home Assistant if desired. Existing gateway policy names are retained to avoid writes caused solely by rebranding.
+For later updates within the `simplifi` domain, use HACS and follow its restart prompt. Existing SimpliFi entries and stored household state remain in place.
 
-The previous updater's GitHub credential is removed from the config entry using Home Assistant's API. Its recovery record is preserved but no old installation or schedule is resumed. An unresolved or unreadable record produces an Activity-view notice. Resolve any previous installer state before proceeding with another update.
-
-For rollback, restore the previous integration files and matching dashboard resource, then restart and verify the stored state against the backup. The obsolete GitHub credential would need to be entered again if you deliberately restore the old updater. Restore stored household data only from a matching verified backup; do not manually edit Home Assistant's `.storage` files.
+For rollback, use the matching verified backup and previous files. Avoid restoring an old policy ownership journal over a gateway whose policies have changed. Do not manually edit Home Assistant's `.storage` files. Resolve outstanding installer or recovery attempts before switching policy managers.

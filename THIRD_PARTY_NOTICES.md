@@ -4,7 +4,7 @@ SimpliFi's independently authored code, documentation and brand artwork are dist
 
 ## IEEE allocation facts
 
-`custom_components/family_network/data/mac-registrants.json.gz` is an independently generated, minimal compilation of public MA-L, MA-M and MA-S allocation facts obtained directly from the IEEE Registration Authority. It contains allocation prefixes and organisation names, with duplicate assignments retained as ambiguous. Contact details and addresses are excluded. IEEE's explanatory text and site assets are not included. The source URLs, retrieval timestamp, record counts and response hashes are in `mac-registrants-sources.json`.
+`custom_components/simplifi/data/mac-registrants.json.gz` is an independently generated, minimal compilation of public MA-L, MA-M and MA-S allocation facts obtained directly from the IEEE Registration Authority. It contains allocation prefixes and organisation names, with duplicate assignments retained as ambiguous. Contact details and addresses are excluded. IEEE's explanatory text and site assets are not included. The source URLs, retrieval timestamp, record counts and response hashes are in `mac-registrants-sources.json`.
 
 Source: https://standards.ieee.org/products-programs/regauth/
 

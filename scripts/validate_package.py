@@ -8,7 +8,7 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-COMPONENT = ROOT / "custom_components" / "family_network"
+COMPONENT = ROOT / "custom_components" / "simplifi"
 
 
 def validate():
@@ -16,20 +16,18 @@ def validate():
     project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
     hacs = json.loads((ROOT / "hacs.json").read_text())
     version = manifest["version"]
-    assert manifest["domain"] == "family_network"
+    assert manifest["domain"] == "simplifi"
     assert manifest["name"] == hacs["name"] == "SimpliFi"
     assert project["version"] == version
     assert re.search(
         rf'^VERSION = "{re.escape(version)}"$', (COMPONENT / "const.py").read_text(), re.M
     )
-    assert (
-        version in (COMPONENT / "frontend" / "family-network-card.js").read_text().splitlines()[0]
-    )
+    assert version in (COMPONENT / "frontend" / "simplifi-card.js").read_text().splitlines()[0]
     assert {
         p.name
         for p in (ROOT / "custom_components").iterdir()
         if p.is_dir() and p.name != "__pycache__"
-    } == {"family_network"}
+    } == {"simplifi"}
     for field in ("documentation", "issue_tracker", "codeowners", "iot_class", "integration_type"):
         assert manifest[field], field
     assert not (ROOT / "www").exists(), "Runtime card must be bundled with the integration"
