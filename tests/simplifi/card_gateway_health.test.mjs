@@ -43,3 +43,9 @@ test('failed health read provides a retry with escaped error',async()=>{
  const c=card();c.api=async()=>{throw new Error('<unsafe>');};await c.gatewayHealthView();
  assert.match(c.rendered.body,/&lt;unsafe&gt;/);assert.match(c.rendered.footer,/gateway-health/);
 });
+test('cached role source, partial metrics and dated timezone-aware samples remain explicit',()=>{
+ const c=card();const times=[];c.time=(value,day,zone)=>{times.push({day,zone});return value;};
+ const h=health();h.devices[0]={...h.devices[0],gateway:true,gateway_source:'ha_unifi_inventory',status:'partial'};
+ c.drawGatewayHealth(h);assert.match(c.rendered.body,/Gateway \(HA UniFi inventory\)/);assert.match(c.rendered.body,/Partial sample/);
+ assert.equal(times.length,2);assert.ok(times.every(t=>t.day&&t.zone));
+});
