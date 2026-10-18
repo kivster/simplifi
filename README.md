@@ -46,6 +46,8 @@ Saved intent, gateway readback and a successful test on a device are different k
 
 Home Assistant must be running to reconcile changes and end temporary allowances. During an outage, the gateway retains its last applied policies; an allowance can outlast its deadline. Other UniFi policies and independent Home Assistant controls can also affect access.
 
+See [HA actions and shortcuts](docs/actions.md) for typed controls, native script examples, command delivery deadlines, response/error handling and authenticated caller requirements.
+
 ## Development
 
 Use Python 3.14 and the versions in `tests/simplifi/requirements.txt`:

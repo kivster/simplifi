@@ -89,6 +89,17 @@ class Engine:
                     if previous["digest"] != digest:
                         raise Conflict("Request ID was already used for a different change")
                     return deepcopy(previous)
+            if "request_expires_at" in payload:
+                try:
+                    request_expiry = instant(payload["request_expires_at"])
+                except SimpliFiError, ValueError, TypeError, OverflowError:
+                    raise SimpliFiError(
+                        "Command validity must be an ISO timestamp with a timezone"
+                    ) from None
+                if request_expiry <= now:
+                    raise Conflict("This command expired; refresh and make a new request")
+                if request_expiry > now + timedelta(minutes=5):
+                    raise SimpliFiError("Command validity must end within the next five minutes")
             if payload.get("expected_revision", state.revision) != state.revision:
                 raise Conflict("Configuration changed; refresh the form and preview again")
             if action == "preview_setup":
@@ -155,6 +166,8 @@ class Engine:
                     "digest": digest,
                 }
                 change["details"] = {"timing": capture_timing(state, draft, action, payload)}
+                if "request_expires_at" in payload:
+                    change["request_expires_at"] = payload["request_expires_at"]
                 draft.changes = [*draft.changes, change][-1000:]
                 await self.save(draft)
                 self.state = draft
@@ -192,6 +205,8 @@ class Engine:
                     "request_id": token,
                     "digest": digest,
                 }
+                if "request_expires_at" in payload:
+                    change["request_expires_at"] = payload["request_expires_at"]
                 draft.changes = [*draft.changes, change][-1000:]
                 await self.save(draft)
                 self.state = draft
@@ -292,6 +307,8 @@ class Engine:
                 "request_id": token,
                 "digest": digest,
             }
+            if "request_expires_at" in payload:
+                change["request_expires_at"] = payload["request_expires_at"]
             draft.changes.append(change)
             if setup_review:
                 change["targets"] = {"group_id": setup_review["group"]["id"]}
@@ -603,7 +620,9 @@ class Engine:
                     and e.rule == rule
                     and (
                         e.kind in ("pause", "internet_allow")
-                        if kind in ("pause", "internet_allow")
+                        if kind == "pause"
+                        else e.kind == "internet_allow"
+                        if kind == "internet_allow"
                         else e.kind in ("suspension", "rule_allow")
                     )
                 )

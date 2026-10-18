@@ -37,6 +37,16 @@ test('network restriction does not offer an individual internet allowance',()=>{
  c.control('child');assert.ok(!c.rendered.body.includes('value="allow_internet"'));
  assert.match(c.rendered.body,/Manage these restrictions from the rule/);
 });
+test('internet control and allowance review explain retained manual pause',async()=>{
+ const c=card();c.data.groups[0].state='scheduled_block';c.control('child');
+ assert.match(c.rendered.body,/does not end a manual pause/);
+ c._modal={kind:'control',id:'child',revision:3};
+ c.form=()=>({reportValidity:()=>true,fields:new Map([['service','allow_internet'],['deadline','30'],['reason','']])});
+ c.confirm=(title,service,payload,description)=>{c.review={service,payload,description};c._modal={};};
+ await c.submit();
+ assert.equal(c.review.service,'allow_internet');
+ assert.match(c.review.description,/manual pause remains in place until resumed or its own deadline/);
+});
 test('saving network rule sends network IDs and retains original modal revision',async()=>{
  const c=card();c.ruleForm();c._draft={...c._draft,name:'Whole network',networks:['family'],groups:[]};
  c._modal={kind:'rule',revision:3};c.data.revision=4;

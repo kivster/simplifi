@@ -51,6 +51,77 @@ async def test_allowance_captures_current_rules_and_new_pause_cancels(household)
     assert not engine.state.exceptions
 
 
+@pytest.mark.parametrize("pause_time", [{"indefinite": True}, {"duration_minutes": 15}])
+@pytest.mark.parametrize("allow_time", [{"duration_minutes": 30}, {"indefinite": True}])
+async def test_internet_allowance_preserves_manual_pause_and_its_owned_policy(
+    household, pause_time, allow_time
+):
+    engine, gateway, _, _ = household
+    engine.state.management = True
+    engine.state.rules["internet"] = Rule("internet", "Internet", "internet", ["child"])
+    engine.state.rules["content"] = Rule("content", "Content", "category", ["child"], [4])
+    await command(engine, "pause_internet", group_id="child", **pause_time)
+    pause = deepcopy(next(e for e in engine.state.exceptions.values() if e.kind == "pause"))
+    await engine.refresh()
+    owned = {k: deepcopy(v) for k, v in engine.state.owned.items() if k.startswith("pause:")}
+    assert owned
+    change = await command(engine, "allow_internet", group_id="child", **allow_time)
+    assert engine.state.exceptions[pause.id] == pause
+    assert engine.status("child")["state"] == "paused"
+    # Timing history must not invent a removed manual pause.
+    assert all(r["id"] != pause.id for r in change["details"]["timing"]["changes"])
+    await engine.refresh()
+    assert {k: v for k, v in engine.state.owned.items() if k.startswith("pause:")} == owned
+    assert all(gateway.policies[v["id"]]["enabled"] for v in owned.values())
+    await command(engine, "resume_internet", group_id="child")
+    await engine.refresh()
+    assert engine.status("child")["state"] == "allowed"
+    assert not any(k.startswith("pause:") for k in engine.state.owned)
+    for key, receipt in engine.state.owned.items():
+        assert gateway.policies[receipt["id"]]["enabled"] == key.startswith("rule:content:")
+
+
+async def test_expired_held_allowance_cannot_revive_when_manual_pause_is_resumed(household):
+    engine, _, now, _ = household
+    engine.state.rules["internet"] = Rule("internet", "Internet", "internet", ["child"])
+    await command(engine, "pause_internet", group_id="child", indefinite=True)
+    await command(engine, "allow_internet", group_id="child", duration_minutes=10)
+    now[0] += timedelta(minutes=11)
+    assert engine.status("child")["state"] == "paused"
+    await command(engine, "resume_internet", group_id="child")
+    assert engine.status("child")["state"] == "scheduled_block"
+
+
+async def test_new_pause_still_cancels_an_allowance_held_behind_a_manual_pause(household):
+    engine, _, _, _ = household
+    engine.state.rules["internet"] = Rule("internet", "Internet", "internet", ["child"])
+    await command(engine, "pause_internet", group_id="child", indefinite=True)
+    await command(engine, "allow_internet", group_id="child", duration_minutes=30)
+    await command(engine, "pause_internet", group_id="child", duration_minutes=60)
+    assert {e.kind for e in engine.state.exceptions.values()} == {"pause"}
+    await command(engine, "resume_internet", group_id="child")
+    assert engine.status("child")["state"] == "scheduled_block"
+
+
+async def test_pause_and_held_allowance_survive_reload_and_keep_their_own_deadlines(household):
+    engine, _, now, saved = household
+    engine.state.rules["internet"] = Rule("internet", "Internet", "internet", ["child"])
+    await command(engine, "pause_internet", group_id="child", duration_minutes=5)
+    await command(engine, "allow_internet", group_id="child", duration_minutes=30)
+    allowance_end = next(
+        e.expires_at for e in engine.state.exceptions.values() if e.kind == "internet_allow"
+    )
+    engine.state = State.from_dict(saved[-1])
+    assert engine.status("child")["state"] == "paused"
+    now[0] += timedelta(minutes=6)
+    await engine.refresh()
+    assert engine.status("child")["state"] == "allowed"
+    assert (
+        next(e.expires_at for e in engine.state.exceptions.values() if e.kind == "internet_allow")
+        == allowance_end
+    )
+
+
 async def test_whole_and_group_rule_lifts_compose(household):
     engine, _, _, _ = household
     bedtime(engine.state)

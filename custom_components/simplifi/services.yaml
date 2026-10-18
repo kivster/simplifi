@@ -51,6 +51,10 @@ upsert_group:
     request_id:
       selector:
         text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
+      selector:
+        text: {}
     reason:
       selector:
         text: {}
@@ -79,6 +83,10 @@ delete_group:
     request_id:
       selector:
         text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
+      selector:
+        text: {}
     reason:
       selector:
         text: {}
@@ -105,6 +113,10 @@ assign_device:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:
@@ -161,6 +173,10 @@ upsert_rule:
     request_id:
       selector:
         text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
+      selector:
+        text: {}
     reason:
       selector:
         text: {}
@@ -183,6 +199,10 @@ delete_rule:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:
@@ -211,6 +231,10 @@ set_rule_enabled:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:
@@ -256,6 +280,10 @@ pause_internet:
     request_id:
       selector:
         text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
+      selector:
+        text: {}
     reason:
       selector:
         text: {}
@@ -278,6 +306,10 @@ resume_internet:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:
@@ -309,6 +341,10 @@ extend_pause:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:
@@ -354,6 +390,10 @@ allow_internet:
     request_id:
       selector:
         text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
+      selector:
+        text: {}
     reason:
       selector:
         text: {}
@@ -376,6 +416,10 @@ end_allowance:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:
@@ -425,6 +469,10 @@ suspend_rule:
     request_id:
       selector:
         text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
+      selector:
+        text: {}
     reason:
       selector:
         text: {}
@@ -451,6 +499,10 @@ resume_rule:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:
@@ -486,6 +538,10 @@ extend_rule_suspension:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:
@@ -535,6 +591,10 @@ allow_rule:
     request_id:
       selector:
         text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
+      selector:
+        text: {}
     reason:
       selector:
         text: {}
@@ -561,6 +621,10 @@ end_rule_allowance:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:
@@ -593,6 +657,10 @@ set_quarantine:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:
@@ -634,6 +702,10 @@ suspend_quarantine:
     request_id:
       selector:
         text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
+      selector:
+        text: {}
     reason:
       selector:
         text: {}
@@ -661,6 +733,10 @@ extend_quarantine_suspension:
     request_id:
       selector:
         text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
+      selector:
+        text: {}
     reason:
       selector:
         text: {}
@@ -679,6 +755,10 @@ resume_quarantine:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:
@@ -711,6 +791,10 @@ set_management:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:
@@ -761,6 +845,10 @@ upsert_probe:
     request_id:
       selector:
         text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
+      selector:
+        text: {}
     reason:
       selector:
         text: {}
@@ -797,6 +885,10 @@ delete_probe:
     request_id:
       selector:
         text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
+      selector:
+        text: {}
     reason:
       selector:
         text: {}
@@ -828,6 +920,10 @@ set_probe_schedule:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:
@@ -927,6 +1023,10 @@ sync_now:
     request_id:
       selector:
         text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
+      selector:
+        text: {}
     reason:
       selector:
         text: {}
@@ -945,6 +1045,10 @@ export_configuration:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:
@@ -973,6 +1077,10 @@ preview_import:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:
@@ -1006,6 +1114,10 @@ apply_import:
     request_id:
       selector:
         text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
+      selector:
+        text: {}
     reason:
       selector:
         text: {}
@@ -1028,6 +1140,10 @@ cleanup_owned:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:
@@ -1056,6 +1172,10 @@ dashboard_configuration:
     request_id:
       selector:
         text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
+      selector:
+        text: {}
     reason:
       selector:
         text: {}
@@ -1074,6 +1194,10 @@ view_activity:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:
@@ -1130,6 +1254,10 @@ forget_device:
     request_id:
       selector:
         text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
+      selector:
+        text: {}
     reason:
       selector:
         text: {}
@@ -1156,6 +1284,10 @@ edit_allowance:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:
@@ -1240,6 +1372,10 @@ resolve_operation:
     request_id:
       selector:
         text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
+      selector:
+        text: {}
 
 access_status:
   name: Read scoped family status
@@ -1316,6 +1452,10 @@ set_access_grant:
     request_id:
       selector:
         text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
+      selector:
+        text: {}
 revoke_access_grant:
   name: Revoke SimpliFi access
   description: Administrator only. Immediately removes this integration grant; leaves
@@ -1339,6 +1479,10 @@ revoke_access_grant:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
 
@@ -1381,6 +1525,10 @@ apply_setup:
       selector:
         boolean: {}
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
 update_status:
@@ -1526,6 +1674,10 @@ unblock_group:
     request_id:
       selector:
         text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
+      selector:
+        text: {}
     reason:
       selector:
         text: {}
@@ -1548,6 +1700,10 @@ end_group_unblock:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:
@@ -1580,6 +1736,10 @@ extend_group_unblock:
           min: 0
           mode: box
     request_id:
+      selector:
+        text: {}
+    request_expires_at:
+      description: Command delivery deadline (ISO timestamp with timezone), within five minutes. Distinct from a temporary control end time.
       selector:
         text: {}
     reason:

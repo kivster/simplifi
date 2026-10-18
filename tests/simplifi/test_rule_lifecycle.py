@@ -128,24 +128,27 @@ async def test_same_scope_replaces_opposite_kind_but_wrong_end_does_nothing(hous
     assert [e.kind for e in engine.state.exceptions.values()] == ["suspension"]
 
 
-async def test_group_internet_allow_replaces_pause_and_individual_rule_allow(household):
+async def test_group_internet_allow_preserves_pause_and_replaces_individual_rule_allow(household):
     engine, _, now, _ = household
     bedtime(engine.state)
     await command(engine, "pause_internet", group_id="child")
     await command(engine, "allow_internet", group_id="child", duration_minutes=20)
-    assert [e.kind for e in engine.state.exceptions.values()] == ["internet_allow"]
+    assert [e.kind for e in engine.state.exceptions.values()] == ["pause", "internet_allow"]
+    assert engine.status("child")["state"] == "paused"
     await command(engine, "allow_internet", group_id="child", duration_minutes=40)
-    assert len(engine.state.exceptions) == 1
+    assert len(engine.state.exceptions) == 2
     assert (
-        next(iter(engine.state.exceptions.values())).expires_at
+        next(e for e in engine.state.exceptions.values() if e.kind == "internet_allow").expires_at
         == (now[0] + timedelta(minutes=40)).isoformat()
     )
     await command(engine, "allow_rule", rule_id="bedtime", group_id="child")
-    assert [e.kind for e in engine.state.exceptions.values()] == ["rule_allow"]
+    assert [e.kind for e in engine.state.exceptions.values()] == ["pause", "rule_allow"]
     await command(engine, "end_allowance", group_id="child")
-    assert not engine.state.exceptions
+    assert [e.kind for e in engine.state.exceptions.values()] == ["pause"]
     await command(engine, "allow_internet", group_id="child")
     await command(engine, "end_rule_allowance", rule_id="bedtime", group_id="child")
+    assert [e.kind for e in engine.state.exceptions.values()] == ["pause"]
+    await command(engine, "resume_internet", group_id="child")
     assert not engine.state.exceptions
 
 

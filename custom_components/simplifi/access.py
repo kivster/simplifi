@@ -224,6 +224,7 @@ def status(state, actor, now, *, confirmed=False, gateway=None):
         "scope": grant["scope"],
         "expires_at": grant["expires_at"],
         "timezone": state.timezone,
+        "now": now.isoformat(),
         "revision": state.revision,
         "confirmed_revision": state.confirmed_revision,
         "sync": state.sync_status,
