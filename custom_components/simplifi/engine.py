@@ -99,7 +99,13 @@ class Engine:
             if action == "access_status":
                 from .access import status
 
-                return status(state, actor, now, confirmed=self.configuration_confirmed(now))
+                return status(
+                    state,
+                    actor,
+                    now,
+                    confirmed=self.configuration_confirmed(now),
+                    gateway=self.gateway,
+                )
             if action == "list_access_grants":
                 return {
                     "access_revision": state.access_revision,

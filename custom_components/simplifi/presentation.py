@@ -10,6 +10,8 @@ from .const import STALE_SECONDS, VERSION
 from .group_controls import summary as unblock_summary
 from .models import instant
 from .planner import group_status, lifted, next_change, rule_devices
+from .rule_summary import summary as rule_summary
+from .rule_summary import target_labels
 from .schedule import occurrences, rule_active
 
 
@@ -51,7 +53,7 @@ async def dashboard_data(hass, entry):
             {
                 **asdict(rule),
                 "active": rule_active(rule, now, state.timezone),
-                "target_names": [labels.get(rule.kind, {}).get(t, str(t)) for t in rule.targets],
+                "target_names": [t["name"] for t in target_labels(rule, labels)],
                 "affected_groups": [g for g in state.groups if rule_devices(state, rule, g)],
             }
         )
@@ -72,15 +74,12 @@ async def dashboard_data(hass, entry):
                 or not rule.enabled
             ):
                 continue
-            spans = (
-                [(start, end)]
-                if not rule.windows
-                else [
-                    span
-                    for window in rule.windows
-                    for span in occurrences(window, start, end, state.timezone)
-                ]
-            )
+            spans = [
+                span
+                for window in rule.windows
+                if not window.all_day
+                for span in occurrences(window, start, end, state.timezone)
+            ]
             for a, b in spans:
                 timeline.append(
                     {
@@ -107,6 +106,7 @@ async def dashboard_data(hass, entry):
             {
                 **asdict(group),
                 **status,
+                **rule_summary(state, group.id, now, confirmed, labels),
                 "unblock": unblock_summary(state, group.id, now),
                 "next_change": upcoming.isoformat() if upcoming else None,
                 "next_state": group_status(state, group.id, upcoming)["state"]
@@ -142,7 +142,10 @@ async def dashboard_data(hass, entry):
         {k: deepcopy(v) for k, v in c.items() if k not in ("digest", "request_id")}
         for c in reversed(state.changes[-100:])
     ]
+    sync_evidence = await coordinator.storage.history.summaries(changes)
     for change in changes:
+        if change["id"] in sync_evidence:
+            change["sync_evidence"] = sync_evidence[change["id"]]
         change["actor"] = names.get(change["actor"])
         targets = change.get("targets", {})
         group_ids = targets.get("groups", []) + (

@@ -13,6 +13,34 @@ from .const import DOMAIN
 from .models import Conflict, instant, uid, utcnow
 
 MAX_RUNS = 10000
+POLICY_OUTCOMES = frozenset(
+    {
+        "pending",
+        "applying",
+        "applied",
+        "failed",
+        "partial",
+        "superseded",
+        "saved_management_disabled",
+    }
+)
+
+
+def policy_change(change):
+    return (
+        "dns_revision" not in change
+        and "access_revision" not in change
+        and change.get("outcome") in POLICY_OUTCOMES
+    )
+
+
+def matching_runs(runs, change):
+    return [
+        r
+        for r in runs
+        if r.get("revision") == change["revision"]
+        and instant(r.get("finished_at") or r["started_at"]) >= instant(change["requested_at"])
+    ]
 
 
 def page(rows, *, before_id=None, limit=50, outcome=None):
@@ -134,13 +162,7 @@ class RunHistory:
     async def for_change(self, change, **query):
         """Link attempts to the exact saved revision, without rewriting its outcome."""
         async with self.lock:
-            rows = [
-                r
-                for r in self.data["runs"]
-                if r.get("revision") == change["revision"]
-                and instant(r.get("finished_at") or r["started_at"])
-                >= instant(change["requested_at"])
-            ]
+            rows = matching_runs(self.data["runs"], change)
             return {
                 **page(rows, **query),
                 "capacity": MAX_RUNS,
@@ -148,3 +170,33 @@ class RunHistory:
                 "latest": deepcopy(rows[-1]) if rows else None,
                 "change": deepcopy(change),
             }
+
+    async def summaries(self, changes):
+        """Cached revision-specific readback, separate from the saved action's outcome."""
+        async with self.lock:
+            by_revision: dict[int, list[dict[str, Any]]] = {}
+            for run in self.data["runs"]:
+                by_revision.setdefault(run["revision"], []).append(run)
+            result = {}
+            for change in changes:
+                if not policy_change(change):
+                    continue
+                rows = matching_runs(by_revision.get(change["revision"], []), change)
+                latest = rows[-1] if rows else None
+                confirmed = [
+                    r
+                    for r in rows
+                    if r.get("outcome") == "applied"
+                    and r.get("confirmed_revision") == change["revision"]
+                    and r.get("unresolved") == 0
+                    and r.get("finished_at")
+                ]
+                result[change["id"]] = {
+                    "revision": change["revision"],
+                    "latest": {k: latest.get(k) for k in ("outcome", "started_at", "finished_at")}
+                    if latest
+                    else None,
+                    "latest_confirmed": bool(latest and confirmed and latest is confirmed[-1]),
+                    "last_confirmed_at": confirmed[-1]["finished_at"] if confirmed else None,
+                }
+            return result
