@@ -1,4 +1,4 @@
-/* SimpliFi card 0.20.1b1 — backed exclusively by authenticated HA actions. */
+/* SimpliFi card 0.21.0b1 — backed exclusively by authenticated HA actions. */
 const requestId = () => {
   const crypto = globalThis.crypto;
   if (typeof crypto?.randomUUID === "function") return crypto.randomUUID();
@@ -1866,6 +1866,7 @@ mode: access</pre><p class="note">Use an existing non-administrator account. A n
         expected_revision: revision,
         expected_dns_revision: this._modal?.dnsRevision ?? this.data?.dns_revision,
         request_id: requestId(),
+        request_expires_at: this.requestExpiry(),
       });
       this._lastChange = result.change || result;
       this._lastLabel = label;
@@ -1881,6 +1882,13 @@ mode: access</pre><p class="note">Use an existing non-administrator account. A n
         .forEach((b) => (b.disabled = false));
       this.render();
     }
+  }
+  requestExpiry() {
+    // Bound delayed delivery from the latest server observation. Device clock
+    // skew cannot extend validity; an old cached screen needs a fresh read.
+    const observed = Date.parse(this.data?.now);
+    if (!Number.isFinite(observed)) throw new Error("Refresh SimpliFi before sending a command.");
+    return new Date(observed + 60000).toISOString();
   }
 }
 if (!customElements.get("simplifi-card"))

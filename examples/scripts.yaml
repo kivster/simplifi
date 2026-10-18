@@ -1,0 +1,48 @@
+# Native HA script definitions. Replace the two REPLACE_ identifiers before use.
+# In the UI script YAML editor, paste only the definition below the script key.
+simplifi_pause_30_minutes:
+  alias: SimpliFi pause for 30 minutes
+  mode: single
+  sequence:
+    - action: simplifi.pause_internet
+      data:
+        entry_id: REPLACE_ENTRY_ID
+        group_id: REPLACE_GROUP_ID
+        duration_minutes: 30
+        request_id: "{{ now().isoformat() ~ '-' ~ (range(65536) | random) }}"
+        request_expires_at: "{{ (now() + timedelta(seconds=60)).isoformat() }}"
+        reason: Requested from the pause shortcut
+      response_variable: saved_change
+    - stop: Saved intent; gateway confirmation is separate
+      response_variable: saved_change
+
+simplifi_resume_manual_pause:
+  alias: SimpliFi resume manual pause
+  mode: single
+  sequence:
+    - action: simplifi.resume_internet
+      data:
+        entry_id: REPLACE_ENTRY_ID
+        group_id: REPLACE_GROUP_ID
+        request_id: "{{ now().isoformat() ~ '-' ~ (range(65536) | random) }}"
+        request_expires_at: "{{ (now() + timedelta(seconds=60)).isoformat() }}"
+        reason: Requested from the resume shortcut
+      response_variable: saved_change
+    - stop: Removed the manual pause; other restrictions can still apply
+      response_variable: saved_change
+
+simplifi_allow_30_minutes:
+  alias: SimpliFi allow internet for 30 minutes
+  mode: single
+  sequence:
+    - action: simplifi.allow_internet
+      data:
+        entry_id: REPLACE_ENTRY_ID
+        group_id: REPLACE_GROUP_ID
+        duration_minutes: 30
+        request_id: "{{ now().isoformat() ~ '-' ~ (range(65536) | random) }}"
+        request_expires_at: "{{ (now() + timedelta(seconds=60)).isoformat() }}"
+        reason: Requested from the internet allowance shortcut
+      response_variable: saved_change
+    - stop: Saved a temporary internet allowance; content rules remain
+      response_variable: saved_change

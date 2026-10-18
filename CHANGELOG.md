@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.21.0b1 — 2026-10-18
+
+- Add optional command delivery deadlines, separate from temporary-control end times. Expired new requests and validity beyond five minutes are rejected under the write lock. Exact retained retries return the original change without extending or reapplying controls; permissions are checked again.
+- Bound card mutations to one minute after the latest server observation, including scoped cards, without depending on the device wall clock. Old cached screens need a fresh read.
+- Publish typed action and response/error guidance, real native script examples and explicit authenticated-context requirements. Automatic triggers remain unauthorised; no account or grant permissions are widened.
+
 ## 0.20.1b1 — 2026-10-18
 
 - Retry inconsistent device-network observations once with a complete fresh read, a one-second settling delay and a 30-second retry budget. Keep current-client reads adjacent to reduce avoidable skew.

@@ -28,6 +28,7 @@ function cardWithCrypto(crypto) {
   const card = Object.create(Card.prototype);
   Object.assign(card, {
     config: { entry_id: "test-entry" },
+    data: { now: "2026-10-18T12:00:00Z" },
     shadowRoot: { querySelectorAll: () => [button] },
     _hass: {
       callWS: async (request) => {
@@ -65,6 +66,7 @@ test("Save uses native randomUUID when available and preserves the request", asy
       kind: "thing",
       expected_revision: 7,
       request_id: id,
+      request_expires_at: "2026-10-18T12:01:00.000Z",
     },
     return_response: true,
   });
@@ -111,5 +113,27 @@ for (const crypto of [undefined, {}]) {
     assert.match(errors[0], /supported browser/);
     assert.equal(card._busy, false);
     assert.equal(button.disabled, false);
+  });
+}
+
+test("command validity follows the server observation and cannot be widened by payload", async () => {
+  const {card, requests, errors} = cardWithCrypto(webcrypto);
+  card.data.now = "2026-10-25T01:30:00+01:00";
+  await card.perform("pause_internet", {group_id:"child", duration_minutes:30,
+    request_expires_at:"2099-01-01T00:00:00Z"}, "Pause", 0);
+  assert.deepEqual(errors, []);
+  assert.equal(requests[0].service_data.request_expires_at, "2026-10-25T00:31:00.000Z");
+  assert.equal(requests[0].service_data.duration_minutes, 30);
+});
+
+for (const now of [undefined, "bad-time"]) {
+  test(`missing server time (${now}) sends no command and restores controls`, async () => {
+    const {card, requests, errors, button} = cardWithCrypto(webcrypto);
+    card.data.now = now;
+    await card.perform("resume_internet", {group_id:"child"}, "Resume", 0);
+    assert.equal(requests.length,0);
+    assert.match(errors[0], /Refresh SimpliFi/);
+    assert.equal(card._busy,false);
+    assert.equal(button.disabled,false);
   });
 }

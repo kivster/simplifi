@@ -9,6 +9,7 @@ BASE: dict[Any, Any] = {
     vol.Optional("expected_dns_revision"): vol.All(int, vol.Range(min=0)),
     vol.Optional("expected_revision"): vol.All(int, vol.Range(min=0)),
     vol.Optional("request_id"): vol.All(str, vol.Length(min=1, max=100)),
+    vol.Optional("request_expires_at"): str,
     vol.Optional("reason", default=""): vol.All(str, vol.Length(max=300)),
 }
 GROUP: dict[Any, Any] = {vol.Required("group_id"): str}

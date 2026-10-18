@@ -7,10 +7,21 @@ instance. The only sockets are the harness's loopback HTTP/WebSocket server.
 import asyncio
 import json
 from datetime import timedelta
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+import yaml
 from homeassistant.setup import async_setup_component
+
+
+def example_scripts(entry):
+    return yaml.safe_load(
+        Path("examples/scripts.yaml")
+        .read_text()
+        .replace("REPLACE_ENTRY_ID", entry.entry_id)
+        .replace("REPLACE_GROUP_ID", "demo-family")
+    )
 
 
 @pytest.fixture
@@ -480,3 +491,122 @@ async def test_native_rule_switch_over_websocket_keeps_identity_and_revocation(
     denied = await t.ws("turn_on", "member", domain="switch", response=False, entity_id=entity)
     assert not denied["success"]
     assert not engine.state.rules["transport-rule"].enabled and engine.state.revision == before
+
+
+async def test_published_script_examples_execute_with_authenticated_identity_and_responses(
+    hass, entry, transports, member
+):
+    from custom_components.simplifi.models import instant
+
+    t = transports
+    engine = entry.runtime_data.engine
+    assert await async_setup_component(hass, "script", {"script": example_scripts(entry)})
+    code, _ = await t.rest(
+        "upsert_rule",
+        "admin",
+        rule_id="bedtime",
+        name="Bedtime",
+        kind="internet",
+        groups=["demo-family"],
+    )
+    assert code == 200
+    for script, kind in [
+        ("simplifi_pause_30_minutes", "pause"),
+        ("simplifi_resume_manual_pause", None),
+        ("simplifi_allow_30_minutes", "internet_allow"),
+    ]:
+        result = await t.ws(script, "member", domain="script", response=True)
+        assert result["success"], result
+        response = result["result"]["response"]
+        assert response["actor"] == member.id and response["id"]
+        validity = instant(response["request_expires_at"])
+        assert timedelta(0) < validity - engine.clock() <= timedelta(seconds=61)
+        await hass.async_block_till_done()
+        records = list(engine.state.exceptions.values())
+        if kind:
+            assert len(records) == 1 and records[0].kind == kind
+            assert instant(records[0].expires_at) > validity + timedelta(minutes=28)
+        else:
+            assert not records and engine.state.rules["bedtime"].enabled
+    # The provided shortcut cannot grant control after its user's access is revoked.
+    code, _ = await t.rest("revoke_access_grant", "admin", user_id=member.id, confirm=True)
+    assert code == 200
+    revision = engine.state.revision
+    denied = await t.ws("simplifi_resume_manual_pause", "member", domain="script", response=True)
+    assert not denied["success"] and engine.state.revision == revision
+
+
+@pytest.mark.parametrize("transport", ["rest", "ws"])
+async def test_delivery_deadlines_survive_authenticated_transport_delay(
+    hass, entry, transports, transport
+):
+    from copy import deepcopy
+
+    engine = entry.runtime_data.engine
+    t = transports
+    await t.grant()
+    start = engine.clock()
+    payload = {
+        "group_id": "demo-family",
+        "duration_minutes": 30,
+        "request_id": "delayed-new",
+        "request_expires_at": (start + timedelta(seconds=30)).isoformat(),
+    }
+    engine.clock = lambda: start + timedelta(seconds=31)
+    before = deepcopy(engine.state.to_dict())
+    ok, _ = await t.call(transport, "pause_internet", **payload)
+    assert not ok and engine.state.to_dict() == before
+    accepted = {
+        **payload,
+        "request_id": "received-new",
+        "request_expires_at": (start + timedelta(seconds=60)).isoformat(),
+    }
+    ok, response = await t.call(transport, "pause_internet", **accepted)
+    assert ok, response
+    first = response["response"] if transport == "ws" else response["service_response"]
+    await hass.async_block_till_done()
+    engine.clock = lambda: start + timedelta(minutes=2)
+    before = deepcopy(engine.state.to_dict())
+    ok, response = await t.call(transport, "pause_internet", **accepted)
+    assert ok
+    retry = response["response"] if transport == "ws" else response["service_response"]
+    assert retry["id"] == first["id"] and engine.state.to_dict() == before
+
+
+async def test_automatic_trigger_and_manual_automation_trigger_do_not_inherit_user_authority(
+    hass, entry, transports, member
+):
+    t = transports
+    engine = entry.runtime_data.engine
+    assert await async_setup_component(hass, "script", {"script": example_scripts(entry)})
+    assert await async_setup_component(
+        hass,
+        "automation",
+        {
+            "automation": [
+                {
+                    "id": "simplifi_context_test",
+                    "alias": "SimpliFi context test",
+                    "triggers": [{"trigger": "event", "event_type": "simplifi_test_request"}],
+                    "actions": [{"action": "script.simplifi_pause_30_minutes"}],
+                }
+            ]
+        },
+    )
+    await hass.async_block_till_done()
+    before = engine.state.to_dict()
+    hass.bus.async_fire("simplifi_test_request")
+    await hass.async_block_till_done()
+    assert engine.state.to_dict() == before
+    result = await t.ws(
+        "trigger",
+        "member",
+        domain="automation",
+        response=False,
+        entity_id="automation.simplifi_context_test",
+    )
+    assert result["success"]  # HA accepted the trigger, not the inner SimpliFi action.
+    await hass.async_block_till_done()
+    assert engine.state.to_dict() == before
+    direct = await t.ws("simplifi_pause_30_minutes", "member", domain="script", response=True)
+    assert direct["success"] and engine.state.changes[-1]["actor"] == member.id
