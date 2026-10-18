@@ -8,10 +8,10 @@ vm.runInNewContext(readFileSync(new URL('../../custom_components/simplifi/fronte
  customElements:{get:()=>undefined,define:(_n,c)=>Card=c}
 });
 function card(){const c=Object.create(Card.prototype);c.data={revision:4};c.open=(title,body,footer,modal)=>{c.rendered={title,body,footer,modal};};return c;}
-function status(){return {installed:'0.18.0b2',provider:'hacs',hacs_loaded:true,legacy_attention:null,check:{status:'managed_by_hacs',available:null}};}
+function status(){return {installed:'0.18.0b3',provider:'hacs',hacs_loaded:true,legacy_attention:null,check:{status:'managed_by_hacs',available:null}};}
 test('updates hand off to HACS without claiming availability or offering host installation',()=>{
  const c=card();c.drawUpdates(status());assert.equal(c.rendered.title,'SimpliFi updates');
- assert.match(c.rendered.body,/href="\/hacs"/);assert.match(c.rendered.body,/Installed 0.18.0b2/);
+ assert.match(c.rendered.body,/href="\/hacs"/);assert.match(c.rendered.body,/Installed 0.18.0b3/);
  assert.ok(!c.rendered.body.includes('Up to date'));
  for(const action of ['update-preview','update-schedule','update-recovery','update-check']) assert.ok(!(c.rendered.body+c.rendered.footer).includes(action));
 });

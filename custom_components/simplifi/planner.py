@@ -289,3 +289,32 @@ def policy_fingerprint(policy: dict) -> str:
     return fingerprint(
         {k: v for k, v in policy.items() if k not in ("id", "index", "metadata") and v is not None}
     )
+
+
+def _comparison_fields(policy: dict) -> dict:
+    fields = {
+        k: v for k, v in policy.items() if k not in ("id", "index", "metadata") and v is not None
+    }
+    schedule = fields.get("schedule")
+    if isinstance(schedule, dict) and schedule.get("mode") == "EVERY_WEEK":
+        days = schedule.get("repeatOnDays")
+        weekdays = {"MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"}
+        if (
+            isinstance(days, list)
+            and days
+            and all(isinstance(day, str) and day in weekdays for day in days)
+            and len(days) == len(set(days))
+        ):
+            # UniFi returns Sunday first. Only this documented set is unordered;
+            # selectors, unknown fields, times and malformed schedules stay strict.
+            fields["schedule"] = {**schedule, "repeatOnDays": sorted(days)}
+    return fields
+
+
+def policy_matches(actual: dict | None, recorded: dict | None, receipt: str) -> bool:
+    """Compare readback semantics while preserving existing raw receipt hashes."""
+    if not isinstance(actual, dict) or not isinstance(recorded, dict):
+        return False
+    if not isinstance(receipt, str) or policy_fingerprint(recorded) != receipt:
+        return False
+    return fingerprint(_comparison_fields(actual)) == fingerprint(_comparison_fields(recorded))

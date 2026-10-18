@@ -23,7 +23,7 @@ from .models import (
     uid,
     utcnow,
 )
-from .planner import group_status, lifted, plan, policy_fingerprint
+from .planner import group_status, lifted, plan, policy_matches
 from .reconciler import Reconciler
 from .schedule import active_end, rule_active
 from .timing_audit import capture as capture_timing
@@ -926,9 +926,10 @@ class Engine:
         if desired.keys() != state.owned.keys():
             return False
         return all(
-            policy_fingerprint(
-                {**body, "description": state.owned[key]["body"].get("description", "")}
+            policy_matches(
+                {**body, "description": state.owned[key]["body"].get("description", "")},
+                state.owned[key]["body"],
+                state.owned[key]["fingerprint"],
             )
-            == state.owned[key]["fingerprint"]
             for key, body in desired.items()
         )

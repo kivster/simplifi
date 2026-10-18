@@ -1,4 +1,4 @@
-# Release status — 0.18.0b2
+# Release status — 0.18.0b3
 
 SimpliFi is a beta custom integration for Home Assistant. Install it as a custom HACS repository or manually; it is not included in HACS's default catalogue.
 

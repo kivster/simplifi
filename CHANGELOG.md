@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.18.0b3 — 2026-10-18
+
+- Accept reordered weekdays when confirming weekly UniFi schedules, including overnight windows crossing Sunday.
+- Preserve existing raw ownership receipts while comparing schedule semantics; changed devices, zones, times and other fields still freeze writes.
+- Apply the same comparison to pending writes, recovery evidence, ownership readback and dashboard confirmation.
+
+A saved create identity is recovered by readback without recreating the policy. No household data migration is required.
+
 ## 0.18.0b2 — 2026-10-18
 
 - Use `simplifi` consistently for the integration folder and domain, service actions, storage keys, export format, dashboard URLs and bundled card.

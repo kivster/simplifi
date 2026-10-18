@@ -132,6 +132,7 @@ async def test_reader_preserves_foreign_policies_and_requires_recorded_fingerpri
         "controller": engine.state.controller,
         "site": engine.state.site,
         "fingerprint": policy_fingerprint(original["foreign"]),
+        "body": deepcopy(original["foreign"]),
     }
     assert reader.snapshot(now[0], engine.state)["policies"][0]["ownership"] == "managed"
     engine.state.owned["key"]["fingerprint"] = "different"
@@ -207,6 +208,7 @@ async def test_newer_owned_write_is_pending_until_a_new_policy_observation(house
         "controller": engine.state.controller,
         "site": engine.state.site,
         "fingerprint": policy_fingerprint(gateway.policies["foreign"]),
+        "body": deepcopy(gateway.policies["foreign"]),
         "readback_at": (now[0] + timedelta(seconds=1)).isoformat(),
     }
     assert reader.snapshot(now[0], engine.state)["policies"][0]["ownership"] == "pending"
