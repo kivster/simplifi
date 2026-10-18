@@ -54,6 +54,18 @@ test('Escape returns to the correct person after background DOM replacement', as
   assert.equal(f.root.activeElement.dataset.id, 'person-2');
 });
 
+test('pointer-opened dialogs retain their invoker when the browser does not focus clicked buttons', async () => {
+  const f = fixture(), opener = f.content.buttons[1];
+  f.c.control = () => f.c.open('Person controls', 'form');
+  assert.equal(f.root.activeElement, null);
+  await f.c.click({composedPath: () => [opener]});
+  await Promise.resolve();
+  f.c.render();
+  f.dialog.close(); f.dispatchClose();
+  assert.equal(f.root.activeElement, f.content.buttons[1]);
+  assert.equal(f.root.activeElement.dataset.id, 'person-2');
+});
+
 test('explicit Cancel restores focus after its render and multi-step dialogs keep the original invoker', async () => {
   const f = fixture(); f.content.buttons[0].focus();
   f.c.open('Controls', 'form'); await Promise.resolve();
