@@ -21,6 +21,12 @@ TIME: dict[Any, Any] = {
     vol.Optional("indefinite"): bool,
 }
 SPECS: dict[str, dict[Any, Any]] = {
+    "preview_content_filter": {vol.Required("profile_id"): str, vol.Required("changes"): dict},
+    "apply_content_filter": {
+        vol.Required("preview_token"): str,
+        vol.Required("confirm"): bool,
+        vol.Required("request_expires_at"): str,
+    },
     "preview_setup": {vol.Required("configuration"): dict},
     "apply_setup": {
         vol.Required("configuration"): dict,

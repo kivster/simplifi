@@ -1745,3 +1745,42 @@ extend_group_unblock:
     reason:
       selector:
         text: {}
+
+preview_content_filter:
+  name: Review UniFi content filter
+  description: Administrator only. Edit an existing shared UniFi profile using the local API. Scope and schedule are preserved;
+    saving requires a fresh review and verifies readback.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    profile_id:
+      required: true
+      selector:
+        text: {}
+    changes:
+      required: true
+      selector:
+        object: {}
+apply_content_filter:
+  name: Save reviewed UniFi content filter
+  description: Administrator only. Edit an existing shared UniFi profile using the local API. Scope and schedule are preserved;
+    saving requires a fresh review and verifies readback.
+  fields:
+    entry_id:
+      required: true
+      selector:
+        text: {}
+    preview_token:
+      required: true
+      selector:
+        text: {}
+    confirm:
+      required: true
+      selector:
+        boolean: {}
+    request_expires_at:
+      required: true
+      selector:
+        text: {}

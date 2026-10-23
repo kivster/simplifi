@@ -58,6 +58,7 @@ async def dashboard_data(hass, entry):
             }
         )
     protection = coordinator.protection.snapshot(now)
+    protection["last_edit"] = await coordinator.protection_editor.status()
     coexistence = coordinator.coexistence.snapshot(now, state)
     groups = []
     for group in state.groups.values():

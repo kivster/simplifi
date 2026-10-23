@@ -1,4 +1,4 @@
-# Release status — 0.21.2b1
+# Release status — 0.22.0b1
 
 SimpliFi is a beta custom integration for Home Assistant. Install it as a custom HACS repository or manually; it is not included in HACS's default catalogue.
 
@@ -16,6 +16,14 @@ SimpliFi is a beta custom integration for Home Assistant. Install it as a custom
 - HACS-managed distribution. The old host-wide installer and its credential form and schedule are removed. Legacy installation actions refuse requests and direct administrators to HACS.
 
 - Unconfirmed dashboard state now shows the integration's specific sync reason, with a stale-confirmation fallback when no reason is available. Pointer-opened dialogs restore focus to their initiating control after dismissal, including across background refreshes. Long names without spaces wrap within cards and dialogs.
+
+## Person controls and content filters
+
+Each person now has direct Block apps, Block websites, Block categories, Schedules and Content filtering & SafeSearch actions. DNS samples and other UniFi rule diagnostics are collapsed under Advanced diagnostics. DNS answers are no longer presented as a person’s category-control status.
+
+Administrators can edit existing shared UniFi profiles: enabled state, configured content categories, SafeSearch providers, and allowed/blocked domains. A review identifies affected networks and individual devices. The editor preserves scope, schedule and unknown fields, rejects stale reviews, journals uncertain writes before I/O, and verifies controller readback. It uses the matching HA UniFi connection and the local Network v2 API, separate from the official policy API. No profile is changed during installation.
+
+See [content-filter editing](content-filter-editing.md) for shared scope, recovery and compatibility limits.
 
 ## Evidence and limitations
 

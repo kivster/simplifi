@@ -22,7 +22,7 @@ test("Filtering offers resolver inheritance and shows running progress without s
   const c = card();
   c.data.dns_progress = {running:true,completed:2,total:8};
   const html = c.filtering();
-  for (const text of ["Resolver settings", "Checking 2 of 8", "Needs checking", "device network", "not a whole category"])
+  for (const text of ["Resolver settings", "Checking 2 of 8", "Needs checking", "network identity", "cannot confirm application blocking"])
     assert.ok(html.includes(text), text);
   assert.ok(html.includes('data-action="dns-all"') && html.includes("disabled"));
 });
