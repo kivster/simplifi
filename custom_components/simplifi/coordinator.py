@@ -52,6 +52,9 @@ class SimpliFiCoordinator(DataUpdateCoordinator):
             "issue": None,
         }
         self.protection = ProtectionReader(hass, engine.gateway)
+        from .protection_editor import ProtectionEditor
+
+        self.protection_editor = ProtectionEditor(hass, entry.entry_id, self.protection, engine)
         self.coexistence = CoexistenceReader(hass, engine.gateway)
         self.gateway_health = GatewayHealth(engine.gateway, engine.clock, hass=hass)
 

@@ -1,4 +1,4 @@
-/* SimpliFi card 0.21.2b1 — backed exclusively by authenticated HA actions. */
+/* SimpliFi card 0.22.0b1 — backed exclusively by authenticated HA actions. */
 const requestId = () => {
   const crypto = globalThis.crypto;
   if (typeof crypto?.randomUUID === "function") return crypto.randomUUID();
@@ -328,7 +328,30 @@ class SimpliFiCard extends HTMLElement {
     if (g.actor) explanation += ` · ${g.actor}`;
     const other = (g.other_policies?.length || 0) + (g.possible_other_policies?.length || 0);
     const accessLabel = this.accessLabel(g);
-    return `<ha-card><div class="row card-top"><div class="avatar">${g.kind === "thing" ? icon("mdi:devices") : photo}</div><div class="grow"><h2>${escape(g.name)}</h2><small>${g.kind === "thing" ? "Shared devices" : escape(g.age ? words(g.age) : "Family member")}</small></div>${this.button("Edit", "group-edit", g.id, 'aria-label="Edit ' + escape(g.name) + '"', "quiet")}</div><div class="status ${escape(g.state)}"><span class="dot"></span>${escape(accessLabel)}</div><div class="description">${escape(explanation)}${g.reason && g.reason !== "Content restrictions may still apply" ? `<br>${escape(g.reason)}` : ""}</div>${other ? `<p class="note spacer">Other UniFi restrictions may also apply. ${this.button("Review other rules", "coexistence", g.id, "", "quiet")}</p>` : ""}<div class="actions">${this.personActions(g)}</div>${this.continuousRules(g)}<div class="categories">${g.categories.map((c) => `<button type="button" class="category ${c.state}" data-action="category" data-id="${escape(g.id)}" data-category="${escape(c.slug || String(c.id))}" aria-label="${escape(g.name + " — " + c.name + ": " + (c.label || words(c.state)))}"><span class="category-icon">${icon(c.icon)}</span><span class="name">${escape(c.name)}</span><span class="state">${escape(c.label || words(c.state))}</span></button>`).join("")}</div><div class="footer"><small>${g.devices} assigned · ${this.data.fresh ? g.connected + " connected" : "last known"}</small>${this.button("Details", "detail", g.id, "", "quiet")}</div></ha-card>`;
+    return `<ha-card><div class="row card-top"><div class="avatar">${g.kind === "thing" ? icon("mdi:devices") : photo}</div><div class="grow"><h2>${escape(g.name)}</h2><small>${g.kind === "thing" ? "Shared devices" : escape(g.age ? words(g.age) : "Family member")}</small></div>${this.button("Edit", "group-edit", g.id, 'aria-label="Edit ' + escape(g.name) + '"', "quiet")}</div><div class="status ${escape(g.state)}"><span class="dot"></span>${escape(accessLabel)}</div><div class="description">${escape(explanation)}${g.reason && g.reason !== "Content restrictions may still apply" ? `<br>${escape(g.reason)}` : ""}</div>${other ? `<p class="note spacer">Other UniFi restrictions may also apply. ${this.button("Review other rules", "coexistence", g.id, "", "quiet")}</p>` : ""}<div class="actions">${this.personActions(g)}</div>${this.continuousRules(g)}${this.personRestrictionActions(g)}<div class="categories">${g.categories.map((c) => `<button type="button" class="category ${c.state}" data-action="category" data-id="${escape(g.id)}" data-category="${escape(c.slug || String(c.id))}" aria-label="${escape(g.name + " — " + c.name + ": " + this.categoryControlLabel(c))}"><span class="category-icon">${icon(c.icon)}</span><span class="name">${escape(c.name)}</span><span class="state">${escape(this.categoryControlLabel(c))}</span></button>`).join("")}</div><div class="footer"><small>${g.devices} assigned · ${this.data.fresh ? g.connected + " connected" : "last known"}</small>${this.button("Details", "detail", g.id, "", "quiet")}</div></ha-card>`;
+  }
+  categoryControlLabel(c) {
+    if ((c.label || "").startsWith("DNS") || ["Needs checking", "Not checked"].includes(c.label))
+      return c.supported ? "No app-category rule" : "No profile confirmed";
+    return c.label || words(c.state);
+  }
+  personRestrictionActions(g) {
+    return `<section class="section"><h3>Restrictions</h3><div class="row wrap spacer">${[["application","Block apps"],["domain","Block websites"],["category","Block categories"],["internet","Schedules"]].map(([kind,label]) => this.button(label,"person-rule",g.id,`data-kind="${kind}"`)).join("")}${this.button("Content filtering & SafeSearch","person-protection",g.id)}</div><p class="note">Choose what to restrict on this person’s assigned devices.</p></section>`;
+  }
+  personProtection(id) {
+    const g = this.data.groups.find(g => g.id === id);
+    const ids = new Set((g.protection?.profiles || []).map(p => p.id));
+    const profiles = (this.data.protection?.profiles || []).filter(p => ids.has(p.id));
+    this.open("Content filtering · " + g.name, `<p>These UniFi profiles apply to this person’s devices. Editing a shared profile affects its other networks and devices too.</p>${profiles.map(p => `<div class="audit-row"><h3>${escape(p.name)}</h3><p>${p.categories.length} blocked categories · SafeSearch: ${escape(p.safe_search.join(", ") || "Off")}</p>${this.profileEditButton(p)}</div>`).join("") || '<p>No enabled matching profile was confirmed. Open Filtering to review all UniFi profiles and their scope.</p>'}`,this.button("Close","close"));
+  }
+  profileEditButton(p) {
+    return this.data.protection?.editing_available ? this.button("Edit content filter","profile-edit",p.id) : '<p class="note">Editing requires a fresh UniFi connection.</p>';
+  }
+  profileForm(id) {
+    const p = this.data.protection.profiles.find(p => p.id === id);
+    if (!p || !this.data.protection.editing_available) throw new Error("Refresh UniFi profiles before editing.");
+    const categories = [...new Set([...(this.data.protection.category_choices || []), ...p.categories])].sort();
+    this.open("Edit UniFi profile · " + p.name, `<p><strong>Applies to:</strong> ${escape(p.networks.map(n=>n.name).join(", ") || "No networks")} · ${p.client_macs.length} individually assigned devices.</p><p class="note">This edits the shared UniFi profile. Its device/network assignments and schedule are preserved.</p><form>${this.check("Enable this profile","enabled",p.enabled)}<h3>SafeSearch</h3>${[...new Set(["GOOGLE","BING","YOUTUBE",...p.safe_search])].map(v=>`<label class="check"><input type="checkbox" name="safe_search" value="${escape(v)}" ${p.safe_search.includes(v)?"checked":""}>${escape(words(v))}</label>`).join("")}<details class="section"><summary>Blocked content categories (${p.categories.length} selected)</summary><p class="note">Choices observed on this controller. Application categories are managed separately using Block categories.</p>${categories.map(v=>`<label class="check"><input type="checkbox" name="categories" value="${escape(v)}" ${p.categories.includes(v)?"checked":""}>${escape(words(v))}</label>`).join("")}</details>${[["allow_list","Allowed domains"],["block_list","Blocked domains"]].map(([k,label])=>`<label class="field">${label}<textarea name="${k}" rows="5">${escape(p[k].join("\n"))}</textarea></label>`).join("")}<p class="note">One domain per line. Allowed domains are exceptions to this profile’s filtering.</p></form>`,this.button("Cancel","close")+this.button("Review changes","submit","","","primary"),{kind:"profile-edit",id});
   }
   accessLabel(g) {
     if (g.state === "scheduled_block" && g.always_on_internet) return "Internet rule active";
@@ -480,11 +503,11 @@ class SimpliFiCard extends HTMLElement {
     const profiles = protection?.profiles || [];
     const status = fresh ? "Controller configuration read" : profiles.length ? "Last-known configuration" : "Filtering readback unavailable";
     const list = (values) => values.length ? values.map((value) => `<li>${escape(value)}</li>`).join("") : "<li>None configured</li>";
-    return `<ha-card><div class="row between wrap"><div><h2>Network protection</h2><p class="lead">Existing UniFi filtering</p></div>${this.button("Refresh", "refresh")}</div>
+    return `<ha-card><div class="row between wrap"><div><h2>Content filtering & SafeSearch</h2><p class="lead">UniFi profiles shared by networks and devices</p></div>${this.button("Refresh", "refresh")}</div>
       <div class="banner ${fresh ? "" : "warning"} spacer" role="status">${icon("mdi:shield-search")}<div><strong>${escape(status)}</strong><p>${escape(protection?.issue || (fresh ? `${profiles.length} profiles · checked ${this.time(protection.observed_at, true)}` : "Waiting for the matching Home Assistant UniFi connection."))}</p></div></div>
-      ${profiles.map((profile) => `<details class="audit-row" data-readback-key="${escape(profile.id)}:profile"><summary><strong>${escape(profile.name)}</strong> <span class="badge ${!fresh ? "amber" : ""}">${!fresh ? "Last known · " : ""}${profile.enabled ? "Enabled" : "Disabled"}</span></summary>
+      <p class="note">A disabled profile does not disable other profiles. Expand a profile to review or edit its filtering.</p>${protection?.last_edit ? `<details class="section" data-readback-key="profile-edit-history"><summary>Last profile save · ${escape(protection.last_edit.status)}</summary><p class="note">${this.time(protection.last_edit.at,true)} · ${escape(profiles.find(p=>p.id===protection.last_edit.profile_id)?.name || "UniFi profile")}</p>${protection.last_edit.status === "uncertain" ? '<p>Save could not be confirmed. Inspect the profile in UniFi, then reopen its editor. Further saves are blocked until readback resolves the outcome.</p>' : ""}${["before","after"].map(k=>`<h3>${k === "before" ? "Previous settings" : "Requested settings"}</h3><ul>${Object.entries(protection.last_edit[k]).map(([field,value])=>`<li>${escape(words(field))}: ${escape(Array.isArray(value) ? value.join(", ") || "None" : value ? "Enabled" : "Disabled")}</li>`).join("")}</ul>`).join("")}</details>` : ""}${profiles.map((profile) => `<details class="audit-row" data-readback-key="${escape(profile.id)}:profile"><summary><strong>${escape(profile.name)}</strong> <span class="badge ${!fresh ? "amber" : ""}">${!fresh ? "Last known · " : ""}${profile.enabled ? "Enabled" : "Disabled"}</span></summary>
         <p class="note">Networks: ${escape(profile.networks.map((n) => n.name).join(", ") || "None")} · ${profile.client_macs.length} individual devices</p>
-        <p class="note">Schedule: ${escape(words(profile.schedule.mode))}${profile.schedule.days?.length ? " · " + escape(profile.schedule.days.join(", ")) : ""}${profile.schedule.time_start ? " · " + escape(profile.schedule.time_start) + "–" + escape(profile.schedule.time_end) : ""}${profile.schedule.date_start ? " · " + escape(profile.schedule.date_start) + "–" + escape(profile.schedule.date_end) : ""}</p>
+        ${this.profileEditButton(profile)}${!profile.enabled ? '<p class="note">This profile is switched off in UniFi. Other enabled profiles can still apply.</p>' : ""}<p class="note">Schedule: ${escape(words(profile.schedule.mode))}${profile.schedule.days?.length ? " · " + escape(profile.schedule.days.join(", ")) : ""}${profile.schedule.time_start ? " · " + escape(profile.schedule.time_start) + "–" + escape(profile.schedule.time_end) : ""}${profile.schedule.date_start ? " · " + escape(profile.schedule.date_start) + "–" + escape(profile.schedule.date_end) : ""}</p>
         <p><strong>SafeSearch:</strong> ${escape(profile.safe_search.join(", ") || "None configured")}</p>
         <details class="section" data-readback-key="${escape(profile.id)}:categories"><summary>Blocked categories (${profile.categories.length})</summary><ul>${list(profile.categories.map(words))}</ul></details>
         <details class="section" data-readback-key="${escape(profile.id)}:allowed"><summary>Allowed domains (${profile.allow_list.length})</summary><ul>${list(profile.allow_list)}</ul></details>
@@ -493,7 +516,7 @@ class SimpliFiCard extends HTMLElement {
       </details>`).join("")}
       ${fresh && !profiles.length ? '<p class="note">No content-filtering profiles returned for this site.</p>' : ""}
       ${protection?.observed_at ? `<p class="note">Last successful read: ${this.time(protection.observed_at, true)}</p>` : ""}
-      <p class="note">${escape(protection?.source || "Home Assistant UniFi Network integration")} · all profiles on this site. Read-only configuration; client traffic has not been tested. An internet allowance does not bypass these filters.</p>
+      <p class="note">${escape(protection?.source || "Home Assistant UniFi Network integration")} · all profiles on this site. Configuration readback; client traffic has not been tested. Editing requires review. An internet allowance does not bypass these filters.</p>
     </ha-card>`;
   }
   policyRows(snapshot = this.data.coexistence, group = this._policyGroup || "", mode = this._policyMode || "restrictions") {
@@ -543,7 +566,7 @@ class SimpliFiCard extends HTMLElement {
   }
   filtering() {
     const probes = Object.entries(this.data.probes);
-    return `<div class="grid">${this.protectionHTML()}<ha-card><h2>Managed restrictions</h2><p class="lead">Rules created by SimpliFi</p><div class="list spacer">${
+    return `${this._profileResult ? `<div class="banner" role="status">${escape(this._profileResult)}</div>` : ""}<div class="grid">${this.protectionHTML()}<ha-card><h2>Managed restrictions</h2><p class="lead">Rules created by SimpliFi</p><div class="list spacer">${
       this.data.rules
         .filter((r) => r.kind !== "internet")
         .map(
@@ -552,8 +575,8 @@ class SimpliFiCard extends HTMLElement {
         )
         .join("") ||
       '<p class="muted">No category, application or website rules yet.</p>'
-    }</div><div class="spacer">${this.button("Add restriction", "rule-new")}</div></ha-card></div><div class="section">${this.coexistenceHTML()}</div><div class="section"><div class="row between card-top wrap"><div><h2>DNS checks</h2><p class="lead">Sample responses from Home Assistant</p></div><div class="row wrap">${this.button("Resolver settings", "dns-settings")}${this.button("Check all", "dns-all", "", this.data.dns_progress?.running || !this.data.dns_settings?.enabled ? "disabled" : "")}${this.button("Add check", "probe-new")}</div></div>
-    <p class="note">Uses each device network’s DHCP DNS unless a person or household resolver is set. DNS results describe these samples, not a whole category or a child’s connection.</p>
+    }</div><div class="spacer">${this.button("Add restriction", "rule-new")}</div></ha-card></div><details class="section" data-readback-key="advanced-diagnostics"><summary>Advanced diagnostics · DNS samples and other UniFi rules</summary><p class="note">These tools diagnose Home Assistant’s network view. They do not test a child’s device or apply restrictions.</p><div class="section">${this.coexistenceHTML()}</div><div class="section"><div class="row between card-top wrap"><div><h2>DNS checks</h2><p class="lead">Sample responses from Home Assistant</p></div><div class="row wrap">${this.button("Resolver settings", "dns-settings")}${this.button("Check all", "dns-all", "", this.data.dns_progress?.running || !this.data.dns_settings?.enabled ? "disabled" : "")}${this.button("Add check", "probe-new")}</div></div>
+    <p class="note">Runs from Home Assistant, even when querying another network’s DNS server. A person context selects a resolver; it does not use that person’s device or network identity. DNS resolution cannot confirm application blocking or access from that device.</p>
     ${this.data.dns_progress?.running ? `<div class="banner" role="status">Checking ${this.data.dns_progress.completed} of ${this.data.dns_progress.total} resolver/list combinations…</div>` : ""}
     ${this.data.dns_progress?.issue ? `<div class="banner warning">${escape(this.data.dns_progress.issue)}</div>` : ""}
     ${!this.data.dns_settings?.enabled ? '<div class="banner warning">DNS observations are disabled. Enable them in Resolver settings.</div>' : ""}
@@ -561,7 +584,7 @@ class SimpliFiCard extends HTMLElement {
       const view = this.data.dns_views?.[id]?.[p.group_id || "household"];
       const label = !p.enabled ? "Disabled" : this.dnsLabel(view?.verdict);
       return `<ha-card><div class="row between"><h3>${escape(p.name)}</h3><span class="badge">${escape(label)}</span></div><p class="note">${p.domains.length} samples${p.seed ? " · Built-in list" : ""}${p.group_id ? " · " + escape(this.groupName(p.group_id)) : ""}</p><p class="note">${escape(view?.contexts?.map(c => c.source + ": " + c.resolver).join(" · ") || "No resolver discovered")}</p>${view?.issues?.length ? `<p class="note">${escape(view.issues.join(" · "))}</p>` : ""}<div class="row wrap">${this.button("Check now", "dns", id, !p.enabled || !this.data.dns_settings?.enabled || this.data.dns_progress?.running ? "disabled" : "")}${this.button("Results", "probe-results", id)}${this.button("Edit", "probe-edit", id)}</div></ha-card>`;
-    }).join("")}</div><div class="spacer">${this.button("Check schedule", "probe-schedule")}</div></div>`;
+    }).join("")}</div><div class="spacer">${this.button("Check schedule", "probe-schedule")}</div></div></details>`;
   }
   dnsLabel(value) {
     return {open: "DNS resolves", blocked: "DNS blocked", partial: "DNS mixed", unknown: "Needs checking"}[value] || "Not checked";
@@ -570,9 +593,9 @@ class SimpliFiCard extends HTMLElement {
     const g = this.data.groups.find(g => g.id === id);
     const c = g.categories.find(c => (c.slug || String(c.id)) === slug);
     this.open(`${g.name} · ${c.name}`,
-      `<div class="row wrap"><span class="badge">${escape(c.label || words(c.state))}</span><span class="badge">${escape(c.dns?.label || "Not checked")}</span></div><ul>${(c.reasons || []).map(r => `<li>${escape(r)}</li>`).join("")}</ul><p class="note">${escape(c.scope || "Device traffic has not been tested")}. A DNS answer can coexist with an application-blocking rule.</p>
+      `<div class="row wrap"><span class="badge">${escape(this.categoryControlLabel(c))}</span></div><ul>${(c.reasons || []).filter(r => !/DNS|sample|comparison/i.test(r)).map(r => `<li>${escape(r)}</li>`).join("")}</ul><p class="note">${escape(c.scope || "Device traffic has not been tested")}. A DNS answer can coexist with an application-blocking rule.</p>
       <h3>Inherited protection</h3>${g.protection?.profiles?.length ? g.protection.profiles.map(p => `<p class="note">${escape(p.name)} · ${p.device_count} device(s) · SafeSearch: ${escape(p.safe_search.join(", ") || "None configured")} · ${p.exceptions} allowed domain(s)${g.protection.fresh ? "" : " · Last known"}</p>`).join("") : '<p class="note">No matching profile was confirmed.</p>'}
-      <div class="row wrap spacer">${(c.dns?.lists || []).map(key => this.button(this.data.probes[key].name + " results", "probe-results", key, `data-group="${escape(id)}"`)).join("")}${this.button("Check this person", "dns-group", id, this.data.dns_progress?.running ? "disabled" : "")}</div>
+      <details class="section"><summary>Advanced DNS diagnostics from Home Assistant</summary><p class="note">These lookups do not test this person’s device or change filtering.</p><p>${escape(c.dns?.label || "Not checked")}</p><div class="row wrap spacer">${(c.dns?.lists || []).map(key => this.button(this.data.probes[key].name + " results", "probe-results", key, `data-group="${escape(id)}"`)).join("")}${this.button("Run HA DNS samples", "dns-group", id, this.data.dns_progress?.running ? "disabled" : "")}</div></details>
       <div class="row wrap spacer">${c.rules.map(r => this.button(this.data.rules.find(rule => rule.id === r)?.name || "Edit rule", "rule-edit", r)).join("")}${c.supported ? this.button("Add category rule", "category-rule", id, `data-category="${escape(c.slug)}"`) : ""}</div>`,
       this.button("Close", "close"), {kind: "category-detail"});
   }
@@ -868,6 +891,13 @@ mode: access</pre><p class="note">Use an existing non-administrator account. A n
         this.deviceForm(id);
         return;
       }
+      if (action === "person-rule") {
+        const kind = target.dataset.kind;
+        this.ruleForm({name: kind === "internet" ? "Internet schedule" : "", kind, groups:[id], targets:[], target_names:[], windows:[], enabled:true});
+        return;
+      }
+      if (action === "person-protection") { this.personProtection(id); return; }
+      if (action === "profile-edit") { this.profileForm(id); return; }
       if (action === "rule-new" || action === "rule-edit") {
         this.ruleForm(
           action === "rule-edit"
@@ -1670,6 +1700,23 @@ mode: access</pre><p class="note">Use an existing non-administrator account. A n
     if (form && !form.reportValidity()) return;
     const fd = form ? new FormData(form) : null;
     let service, payload, title;
+    if (modal.kind === "profile-edit") {
+      const changes = {enabled:fd.has("enabled"),categories:fd.getAll("categories"),safe_search:fd.getAll("safe_search")};
+      for (const key of ["allow_list","block_list"]) changes[key] = String(fd.get(key)).split(/\r?\n/).map(v=>v.trim()).filter(Boolean);
+      const preview = await this.api("preview_content_filter",{profile_id:modal.id,changes});
+      this.open("Review shared UniFi profile · " + preview.profile.name, `<p>${escape(preview.note)}</p><p><strong>Networks:</strong> ${escape(preview.profile.networks.map(n=>n.name).join(", ") || "None")}</p><p><strong>Individual devices:</strong> ${escape(preview.profile.client_macs.map(mac=>this.data.devices.find(d=>d.mac.toLowerCase()===mac.toLowerCase())?.name || mac).join(", ") || "None")}</p><p><strong>Schedule:</strong> ${escape(words(preview.profile.schedule.mode))}${preview.profile.schedule.time_start ? " · " + escape(preview.profile.schedule.time_start) + "–" + escape(preview.profile.schedule.time_end) : ""}${preview.profile.schedule.days?.length ? " · " + escape(preview.profile.schedule.days.join(", ")) : ""}</p>${preview.changed_fields.map(k=>`<div class="audit-row"><h3>${escape(words(k))}</h3><p>Before: ${escape(Array.isArray(preview.before[k]) ? preview.before[k].join(", ") || "None" : String(preview.before[k]))}</p><p>After: ${escape(Array.isArray(preview.after[k]) ? preview.after[k].join(", ") || "None" : String(preview.after[k]))}</p></div>`).join("") || '<p>No changes.</p>'}`,this.button("Cancel","close")+this.button("Save to UniFi","submit","","","primary"),{kind:"profile-review",token:preview.preview_token});
+      return;
+    }
+    if (modal.kind === "profile-review") {
+      if (this._busy) return;
+      this._busy = true;
+      try {
+        const result = await this.api("apply_content_filter",{preview_token:modal.token,confirm:true,request_expires_at:this.requestExpiry()});
+        this._profileResult = result.message;
+        this.close(); await this.refresh();
+      } finally { this._busy = false; }
+      return;
+    }
     if (modal.kind === "confirm") {
       await this.perform(
         modal.service,

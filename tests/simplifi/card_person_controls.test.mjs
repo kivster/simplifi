@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import test from 'node:test';
+import vm from 'node:vm';
+let Card;
+vm.runInNewContext(readFileSync(new URL('../../custom_components/simplifi/frontend/simplifi-card.js',import.meta.url),'utf8'),{
+ HTMLElement:class{},window:{},structuredClone,
+ FormData:class{constructor(f){this.f=f;}has(k){return this.f.fields.has(k);}get(k){return this.f.fields.get(k);}getAll(k){return this.f.fields.get(k)||[];}},
+ customElements:{get:()=>undefined,define:(_n,c)=>Card=c}
+});
+function card(){const c=Object.create(Card.prototype);c.data={devices:[],groups:[],protection:{editing_available:true,category_choices:['ADULT','MALWARE'],profiles:[{id:'p',name:'Shared <profile>',enabled:false,networks:[{name:'Family network'}],client_macs:['00:00:00:00:00:01'],categories:['ADULT'],safe_search:['GOOGLE'],allow_list:['keep.example'],block_list:[],schedule:{mode:'ALWAYS'}}]}};c.open=(title,body,footer,modal)=>{c.shown={title,body,footer,modal};};return c;}
+test('person controls expose all restriction entry points and carry person identity',()=>{const c=card();const h=c.personRestrictionActions({id:'child'});for(const label of ['Block apps','Block websites','Block categories','Schedules','Content filtering &amp; SafeSearch'])assert.ok(h.includes(label),label);assert.equal((h.match(/data-id="child"/g)||[]).length,5);});
+test('DNS answers are not shown as person filtering status',()=>{const c=card();assert.equal(c.categoryControlLabel({label:'DNS resolves',supported:true}),'No app-category rule');assert.equal(c.categoryControlLabel({label:'Filter configured',supported:false}),'Filter configured');});
+test('profile form makes shared scope explicit and preserves checked categories and exceptions',()=>{const c=card();c.profileForm('p');const h=c.shown.body;assert.ok(h.includes('Family network')&&h.includes('1 individually assigned'));assert.ok(h.includes('keep.example'));assert.ok(h.includes('value="ADULT" checked'));assert.ok(h.includes('value="MALWARE" '));assert.ok(h.includes('assignments and schedule are preserved'));assert.equal(c.shown.modal.kind,'profile-edit');});
+test('stale profile cannot open a misleading editable form',()=>{const c=card();c.data.protection.editing_available=false;assert.throws(()=>c.profileForm('p'),/Refresh/);});
+test('review submits only editable fields and never saves before explicit confirmation',async()=>{const c=card();c._modal={kind:'profile-edit',id:'p'};c.form=()=>({reportValidity:()=>true,fields:new Map([['enabled',true],['categories',['ADULT']],['safe_search',['BING']],['allow_list','keep.example\n'],['block_list','blocked.example']])});let called=[];c.api=async(name,data)=>{called.push([name,data]);return {preview_token:'bound-token',profile:c.data.protection.profiles[0],note:'Shared scope',changed_fields:['safe_search'],before:{safe_search:['GOOGLE']},after:{safe_search:['BING']}};};await c.submit();assert.equal(called.length,1);assert.equal(called[0][0],'preview_content_filter');assert.equal(called[0][1].changes.block_list[0],'blocked.example');assert.ok(!('network_ids' in called[0][1].changes));assert.equal(c.shown.modal.token,'bound-token');assert.ok(c.shown.body.includes('Before: GOOGLE')&&c.shown.body.includes('After: BING'));assert.ok(c.shown.footer.includes('Save to UniFi'));});

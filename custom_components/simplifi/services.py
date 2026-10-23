@@ -47,6 +47,14 @@ def register_services(hass):
                         "SimpliFi updates are managed through HACS. "
                         "Legacy installation, scheduling and recovery actions are disabled."
                     )
+                if action == "preview_content_filter":
+                    return await coordinator.protection_editor.preview(
+                        data["profile_id"], data["changes"], actor
+                    )
+                if action == "apply_content_filter":
+                    return await coordinator.protection_editor.apply(
+                        data["preview_token"], actor, data["confirm"], data["request_expires_at"]
+                    )
                 if action == "access_users":
                     return {
                         "users": [

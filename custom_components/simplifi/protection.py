@@ -198,4 +198,6 @@ class ProtectionReader:
             "scope": "All filtering profiles on the matched UniFi site",
             "limit": MAX_PROFILES,
             "read_only": True,
+            "editing_available": fresh and not self.gateway.simulation,
+            "category_choices": sorted({c for p in self.profiles for c in p["categories"]}),
         }
