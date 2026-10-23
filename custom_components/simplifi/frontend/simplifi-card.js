@@ -893,7 +893,7 @@ mode: access</pre><p class="note">Use an existing non-administrator account. A n
       }
       if (action === "person-rule") {
         const kind = target.dataset.kind;
-        this.ruleForm({name: kind === "internet" ? "Internet schedule" : "", kind, groups:[id], targets:[], target_names:[], windows:[], enabled:true});
+        this.ruleForm({name: kind === "internet" ? "Internet schedule" : "", kind, groups:[id], targets:[], target_names:[], windows:kind === "internet" ? [{name:"Bedtime",days:[0,1,2,3,4],start:"21:00",end:"07:00",overnight:true,all_day:false}] : [], enabled:true});
         return;
       }
       if (action === "person-protection") { this.personProtection(id); return; }
