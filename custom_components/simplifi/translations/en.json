@@ -64,6 +64,13 @@
         "data": {
           "confirm": "Save this reviewed connection and reload the integration"
         }
+      },
+      "reauth_confirm": {
+        "title": "Reconnect to UniFi",
+        "description": "UniFi rejected the saved API key. Enter a valid key for the same controller and site. Your household settings and policy ownership will be retained.",
+        "data": {
+          "api_key": "API key"
+        }
       }
     },
     "error": {
@@ -76,7 +83,8 @@
       "cannot_connect": "Gateway resources unavailable. No policy was written.",
       "invalid_scope": "Invalid or missing scope.",
       "simulator_reconfigure": "The simulator has no live connection. Add a separate live entry to connect to UniFi.",
-      "reconfigure_successful": "Connection settings saved. The integration is reloading."
+      "reconfigure_successful": "Connection settings saved. The integration is reloading.",
+      "reauth_successful": "UniFi credentials updated. SimpliFi will reconnect automatically."
     }
   },
   "options": {
@@ -232,7 +240,7 @@
   "issues": {
     "sync_failed": {
       "title": "SimpliFi sync could not be confirmed",
-      "description": "Intent and ownership journal were retained. Inspect integration diagnostics. An uncertain create or an externally edited policy freezes the writer; review operation evidence before recovery. Temporary allowances may outlast deadlines while HA is down."
+      "description": "SimpliFi cannot currently confirm or update gateway policies. Saved settings and policy ownership are retained. Open the SimpliFi dashboard or download diagnostics for the specific reason. SimpliFi retries automatically. Existing gateway rules remain in place, but temporary allowances and pauses may outlast their deadlines while policy updates are paused."
     },
     "inventory_scope_failed": {
       "title": "SimpliFi device networks could not be confirmed",

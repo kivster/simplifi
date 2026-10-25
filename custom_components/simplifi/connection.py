@@ -17,6 +17,48 @@ from .storage import HouseholdStorage
 
 
 class ConnectionFlow:
+    async def async_step_reauth(self, entry_data):
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(self, user_input=None):
+        entry = self._get_reauth_entry()
+        errors, placeholders = {}, {}
+        if user_input is not None:
+            # HA starts reauth without a web request. Only a submitting admin may
+            # validate and replace the credential; controller/site stay fixed.
+            await self._connection_actor()
+            try:
+                gateway = UniFiGateway(
+                    async_get_clientsession(self.hass),
+                    entry.data["controller"],
+                    user_input["api_key"],
+                    site=entry.data["site"],
+                    verify_ssl=entry.data.get("verify_ssl", True),
+                )
+                sites = await gateway.connect()
+                if entry.data["site"] not in {s["id"] for s in sites}:
+                    raise SimpliFiError("This API key cannot access the configured site")
+                return self.async_update_reload_and_abort(
+                    entry,
+                    data_updates={"api_key": gateway.api_key},
+                    reason="reauth_successful",
+                )
+            except (SimpliFiError, TimeoutError) as error:
+                errors["base"] = "setup_failed"
+                placeholders["error"] = (
+                    str(error)
+                    if isinstance(error, SimpliFiError)
+                    else "Controller request timed out"
+                )
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema(
+                {vol.Required("api_key"): selector({"text": {"type": "password"}})}
+            ),
+            errors=errors,
+            description_placeholders=placeholders,
+        )
+
     async def _connection_actor(self):
         from .config_flow import request_actor
 

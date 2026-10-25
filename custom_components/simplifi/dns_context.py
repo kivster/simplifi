@@ -106,7 +106,19 @@ def settings(data, groups):
 def network_dns(detail):
     """Only an explicit DHCP SERVER has known DNS inheritance; never guess relay."""
     ipv4 = detail.get("ipv4Configuration") or {}
+    if not isinstance(ipv4, dict):
+        return {
+            "resolvers": [],
+            "issue": "DHCP DNS response is incompatible",
+            "source": "unavailable",
+        }
     dhcp = ipv4.get("dhcpConfiguration") or {}
+    if not isinstance(dhcp, dict):
+        return {
+            "resolvers": [],
+            "issue": "DHCP DNS response is incompatible",
+            "source": "unavailable",
+        }
     if dhcp.get("mode") != "SERVER":
         return {
             "resolvers": [],

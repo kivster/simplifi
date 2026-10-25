@@ -23,7 +23,7 @@ The dashboard has Family, Devices, Rules, Filtering and Activity views. Its Love
 
 ## Installation
 
-Requires Home Assistant 2026.10.1 or later for the currently validated development environment, plus the UniFi Network local Integration API on 10.6.106 or 10.6.109. Live features depend on the controller's endpoints, permissions and firmware. Start with the simulator or observation mode to check compatibility.
+Requires Home Assistant 2026.10.1 or later for the currently validated development environment, plus a UniFi Network local Integration API exposing the required firewall and inventory endpoints. Compatibility is checked from API responses; unfamiliar Network version numbers do not block setup. Tested versions include 10.6.106 and 10.6.109. Live features depend on the controller's endpoints, permissions and firmware. Start with the simulator or observation mode to check compatibility.
 
 1. In HACS, add `https://github.com/kivster/simplifi` as a custom repository of type **Integration**.
 2. Enable beta releases for the repository, download **SimpliFi** and restart Home Assistant.
@@ -35,6 +35,10 @@ Requires Home Assistant 2026.10.1 or later for the currently validated developme
 For a manual installation, copy `custom_components/simplifi` into your Home Assistant configuration directory and restart.
 
 If replacing a prototype or an earlier beta with a different integration identity, follow [migration](docs/migration.md) before installing. This release uses the `simplifi` integration domain and requires a fresh setup in that case.
+
+## Gateway compatibility
+
+SimpliFi reconnects automatically after gateway restarts and keeps saved settings, diagnostics and the dashboard accessible during temporary failures. Missing app/category catalogues disable their editors; if a saved rule needs a missing catalogue, policy automation pauses to preserve the existing rules. Rejected API keys open Home Assistant's credential repair flow. See [compatibility and recovery](docs/compatibility.md).
 
 ## Updates
 

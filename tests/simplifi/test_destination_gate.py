@@ -32,7 +32,12 @@ from custom_components.simplifi.models import CapabilityError
 async def test_live_adapter_refuses_non_internet_destination(zone):
     gateway = UniFiGateway(None, "https://controller.example", "test", "site", ["network"], "zone")
     gateway.pages = AsyncMock(
-        side_effect=[[{"id": "network", "name": "Family", "zoneId": "home"}], [zone], [], []]
+        side_effect=[
+            [{"id": "network", "name": "Family", "zoneId": "home"}],
+            [zone, {"id": "home", "name": "Internal"}],
+            [],
+            [],
+        ]
     )
     gateway.request = AsyncMock(
         return_value={
@@ -58,7 +63,12 @@ async def test_builtin_external_identity_does_not_require_empty_membership(membe
         None, "https://controller.example", "test", "site", ["network"], "external"
     )
     gateway.pages = AsyncMock(
-        side_effect=[[{"id": "network", "name": "Family", "zoneId": "home"}], [zone], [], []]
+        side_effect=[
+            [{"id": "network", "name": "Family", "zoneId": "home"}],
+            [zone, {"id": "home", "name": "Internal"}],
+            [],
+            [],
+        ]
     )
     gateway.request = AsyncMock(return_value={"id": "network"})
     await gateway.refresh_resources()

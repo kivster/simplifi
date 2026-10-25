@@ -1,4 +1,4 @@
-"""Local official Network Integration API 10.6.106 adapter.
+"""Local official Network Integration API adapter with runtime contract checks.
 
 No legacy/v2 calls, cloud connector, client-block actions or policy ordering writes.
 All HTTP response bodies are excluded from errors to avoid credential leakage.
@@ -6,12 +6,21 @@ All HTTP response bodies are excluded from errors to avoid credential leakage.
 
 import asyncio
 import ipaddress
-import re
 from typing import Any
 from urllib.parse import quote, urlsplit
 
 import aiohttp
 
+from ..compatibility import (
+    TESTED_NETWORK_VERSIONS,
+    identity,
+    require,
+    validate_catalogue,
+    validate_network,
+    validate_policy,
+    validate_sites,
+    version_label,
+)
 from ..inventory import (
     InventoryScopeError,
     client_network,
@@ -20,10 +29,17 @@ from ..inventory import (
     network_subnets,
     registrant_database,
 )
-from ..models import CapabilityError, Device, SimpliFiError, instant, mac_address, utcnow
+from ..models import (
+    CapabilityError,
+    Device,
+    GatewayAuthenticationError,
+    SimpliFiError,
+    instant,
+    mac_address,
+    utcnow,
+)
 from ..request_meter import MeteredSession, RequestMeter
 
-SUPPORTED_NETWORK_VERSIONS = ("10.6.106", "10.6.109")
 DISCOVERY_RETRY_TIMEOUT = 30
 
 
@@ -101,6 +117,14 @@ class UniFiGateway:
             )
         }
         self.version = "unknown"
+        self.compatibility: dict[str, Any] = {
+            "status": "not_checked",
+            "application_version": "unknown",
+            "tested_version": False,
+            "checked_at": None,
+            "issue": None,
+            "features": {},
+        }
         self.legacy_site = None
         self.request_meter = RequestMeter()
         self.discovery_readback: dict = {"status": "not_read", "attempts": 0, "scope_issues": []}
@@ -132,7 +156,7 @@ class UniFiGateway:
                     ):
                         pass
                     elif response.status == 401:
-                        raise SimpliFiError(
+                        raise GatewayAuthenticationError(
                             "UniFi rejected the API key (HTTP 401). Use the complete key created "
                             "in this console's local Integrations page"
                         )
@@ -199,31 +223,58 @@ class UniFiGateway:
                 break
             if not page["data"]:
                 raise SimpliFiError("Unexpected empty page")
-        if any(not isinstance(x, dict) or "id" not in x for x in result) or len(
-            {x["id"] for x in result}
-        ) != len(result):
+        if any(
+            not isinstance(x, dict)
+            or not (identity(x.get("id")) or type(x.get("id")) is int and x["id"] >= 0)
+            for x in result
+        ) or len({x["id"] for x in result}) != len(result):
             raise SimpliFiError("Duplicate or missing inventory identities")
         return result
 
-    async def connect(self):
-        info = await self.request("GET", "/v1/info")
-        self.version = (
-            info.get("applicationVersion", "unknown") if isinstance(info, dict) else "unknown"
+    async def begin_read(self):
+        self.compatibility.update(
+            status="checking", issue=None, checked_at=utcnow().isoformat(), features={}
         )
-        if self.version not in SUPPORTED_NETWORK_VERSIONS:
-            # Only display a bounded version number, never arbitrary response content.
-            detected = (
-                self.version
-                if isinstance(self.version, str)
-                and re.fullmatch(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}", self.version)
-                else "unknown"
-            )
-            supported = ", ".join(SUPPORTED_NETWORK_VERSIONS)
+        sites = await self.connect()
+        if self.site not in {s["id"] for s in sites}:
             raise CapabilityError(
-                f"UniFi Network {detected} is not supported by this SimpliFi version. "
-                f"Supported versions: {supported}. Check for a SimpliFi update in HACS"
+                "The selected UniFi site is unavailable. Check the API key's site permissions; saved settings are retained"
             )
+
+    def finish_read(self, error=None):
+        self.compatibility.update(
+            status=(
+                "authentication_required"
+                if isinstance(error, GatewayAuthenticationError)
+                else "paused"
+                if error
+                else "limited"
+                if "unavailable" in self.compatibility["features"].values()
+                else "available"
+            ),
+            issue=str(error) if error else None,
+            checked_at=utcnow().isoformat(),
+        )
+
+    async def connect(self):
+        try:
+            info = await self.request("GET", "/v1/info")
+        except GatewayAuthenticationError:
+            raise
+        except SimpliFiError, TimeoutError:
+            # Version metadata is optional. Required site/resource reads still
+            # establish connectivity, permissions and the usable API contract.
+            info = None
+            self.compatibility["features"]["application_info"] = "unavailable"
+        self.version = version_label(
+            info.get("applicationVersion") if isinstance(info, dict) else None
+        )
+        self.compatibility.update(
+            application_version=self.version,
+            tested_version=self.version in TESTED_NETWORK_VERSIONS,
+        )
         sites = await self.pages("/v1/sites", cap=100)
+        validate_sites(sites)
         if not sites:
             raise SimpliFiError(
                 "UniFi returned no accessible sites. Check this key's site permissions"
@@ -236,15 +287,34 @@ class UniFiGateway:
     async def refresh_resources(self):
         summaries = await self.pages(self.site_path + "/networks", cap=1000)
         zones = await self.pages(self.site_path + "/firewall/zones", cap=1000)
+        require(
+            all(identity(z.get("id")) and isinstance(z.get("name"), str) for z in zones),
+            "firewall zone",
+        )
         destination = external_zone_id(zones)
         networks = {}
         # Full network details are required to constrain client scope; no legacy IDs.
         for summary in summaries:
+            validate_network(summary, {z["id"] for z in zones})
             detail = await self.request(
                 "GET", self.site_path + "/networks/" + quote(summary["id"], safe="")
             )
             if not isinstance(detail, dict) or detail.get("id") != summary["id"]:
-                raise SimpliFiError("Invalid network readback")
+                raise CapabilityError("Invalid network readback; policy updates paused")
+            require(
+                detail.get("internetAccessEnabled") is None
+                or type(detail["internetAccessEnabled"]) is bool,
+                "network",
+            )
+            for family in ("ipv4Configuration", "ipv6Configuration"):
+                config = detail.get(family)
+                require(config is None or isinstance(config, dict), "network subnet")
+                if config:
+                    require(
+                        config.get("additionalHostIpSubnets") is None
+                        or isinstance(config["additionalHostIpSubnets"], list),
+                        "network subnet",
+                    )
             subnets = network_subnets(detail)
             subnet = next((s for s in subnets if ipaddress.ip_network(s).version == 4), None)
             from ..dns_context import network_dns
@@ -257,10 +327,8 @@ class UniFiGateway:
                 "internet_enabled": detail.get("internetAccessEnabled"),
                 "dns": network_dns(detail),
             }
-        categories = await self.pages("/v1/dpi/categories")
-        applications = await self.pages("/v1/dpi/applications", cap=30000)
-        if any(type(x["id"]) is not int for x in categories + applications):
-            raise SimpliFiError("Invalid DPI catalogue")
+        categories = await self._catalogue("category", "/v1/dpi/categories", 10000)
+        applications = await self._catalogue("application", "/v1/dpi/applications", 30000)
         if self.scope and not set(self.scope) <= set(networks):
             raise CapabilityError("Managed network is missing; writer frozen")
         if self.external_zone and self.external_zone != destination:
@@ -274,14 +342,36 @@ class UniFiGateway:
             "application": {a["id"] for a in applications},
         }
         self.capabilities.update(
-            {
-                k: "documented_not_live_tested"
-                for k in ("internet", "category", "application", "domain", "recurrence")
-            }
+            {k: "documented_not_live_tested" for k in ("internet", "domain", "recurrence")}
         )
         self.capabilities.update(
             {"absolute_expiry": "unsupported", "external_filters": "unsupported_official_api"}
         )
+
+    async def _catalogue(self, kind, path, cap):
+        try:
+            rows = await self.pages(path, cap=cap)
+            validate_catalogue(rows)
+        except GatewayAuthenticationError:
+            raise
+        except SimpliFiError, TimeoutError:
+            self.capabilities[kind] = "unavailable"
+            self.compatibility["features"][kind] = "unavailable"
+            return []
+        self.capabilities[kind] = "catalogue_read"
+        self.compatibility["features"][kind] = "available"
+        return rows
+
+    def require_rule_catalogues(self, rules):
+        # Planning must never drop an existing rule merely because its catalogue
+        # disappeared. Pause the shared policy plan if any saved rule needs it.
+        for kind in ("category", "application"):
+            if self.capabilities.get(kind) == "unavailable" and any(
+                r.kind == kind for r in rules.values()
+            ):
+                raise CapabilityError(
+                    f"UniFi's {kind} catalogue is unavailable. Policy updates are paused to preserve existing rules; SimpliFi will retry automatically"
+                )
 
     async def discover(self) -> list[Device]:
         """Retry one inconsistent scope snapshot, without accepting either side of a conflict."""
@@ -335,6 +425,8 @@ class UniFiGateway:
                 payload = await self.request(
                     "GET", self.site_path + "/networks/" + quote(key, safe="") + "/references"
                 )
+            except GatewayAuthenticationError:
+                raise
             except SimpliFiError:
                 # Some 10.6.106 networks return HTTP 500 here. A unique configured
                 # subnet remains a labelled fallback; unmapped clients still freeze
@@ -350,6 +442,8 @@ class UniFiGateway:
                 r["id"]: r.get("name")
                 for r in await self.pages(self.site_path + "/devices", cap=2000)
             }
+        except GatewayAuthenticationError:
+            raise
         except SimpliFiError:
             uplinks = {}
         try:
@@ -360,12 +454,21 @@ class UniFiGateway:
         seen = set()
         observed = utcnow().isoformat()
         for row in rows:
-            if row.get("type") not in ("WIRED", "WIRELESS"):
+            require(
+                identity(row.get("id"))
+                and row.get("type") in ("WIRED", "WIRELESS", "VPN", "TELEPORT"),
+                "client identity",
+            )
+            if row["type"] in ("VPN", "TELEPORT"):
                 continue
+            require(row.get("name") is None or isinstance(row["name"], str), "client name")
+            require(
+                row.get("ipAddress") is None or isinstance(row["ipAddress"], str), "client address"
+            )
             try:
                 mac = mac_address(row["macAddress"])
                 ip = ipaddress.ip_address(row["ipAddress"]) if row.get("ipAddress") else None
-            except KeyError, ValueError:
+            except KeyError, ValueError, TypeError:
                 raise SimpliFiError(
                     "Client identity/address unavailable; discovery incomplete"
                 ) from None
@@ -421,19 +524,7 @@ class UniFiGateway:
     async def list_policies(self):
         rows = await self.pages(self.site_path + "/firewall/policies", cap=10000)
         for row in rows:
-            if not all(
-                k in row
-                for k in (
-                    "enabled",
-                    "action",
-                    "source",
-                    "destination",
-                    "ipProtocolScope",
-                    "loggingEnabled",
-                    "name",
-                )
-            ):
-                raise SimpliFiError("Incomplete policy read; writer frozen")
+            validate_policy(row)
         return {r["id"]: r for r in rows}
 
     async def create(self, body):
