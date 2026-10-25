@@ -4,6 +4,7 @@ from datetime import timedelta
 
 from homeassistant.components.sensor import SensorEntity
 
+from .compatibility import snapshot as compatibility_snapshot
 from .const import STALE_SECONDS
 from .entity import SimpliFiEntity, dynamic_setup
 from .models import instant
@@ -12,9 +13,15 @@ from .planner import next_change
 
 class SimpliFiSensor(SimpliFiEntity, SensorEntity):
     @property
+    def available(self):
+        return self.key in ("sync", "compatibility") or super().available
+
+    @property
     def native_value(self):
         state = self.state_model
         now = self.coordinator.engine.clock()
+        if self.key == "compatibility":
+            return compatibility_snapshot(self.coordinator.engine.gateway)["status"]
         if self.key == "sync":
             return (
                 "pending"
@@ -103,6 +110,8 @@ class SimpliFiSensor(SimpliFiEntity, SensorEntity):
     @property
     def extra_state_attributes(self):
         state = self.state_model
+        if self.key == "compatibility":
+            return compatibility_snapshot(self.coordinator.engine.gateway)
         if self.key == "protection":
             protection = self.coordinator.protection.snapshot(self.coordinator.engine.clock())
             return {
@@ -155,6 +164,7 @@ async def async_setup_entry(hass, entry, async_add_entities):
     def factory(state):
         for key, name in (
             ("sync", "Sync status"),
+            ("compatibility", "Gateway compatibility"),
             ("unassigned", "Unassigned devices"),
             ("protection", "External network protection"),
             ("activity", "Last change"),

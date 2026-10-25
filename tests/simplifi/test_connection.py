@@ -218,3 +218,39 @@ async def test_binding_handoff_refuses_mismatched_token_or_late_changes(hass, co
     with pytest.raises(SimpliFiError, match="handoff"):
         await storage.load(state, proposed.binding_token)
     assert (await storage.store.async_load())["binding_token"] is None
+
+
+async def test_reauth_updates_only_key_after_same_site_check(hass, connection):
+    entry, _, state = connection
+    original = dict(entry.data)
+    result = await hass.config_entries.flow.async_init(
+        "simplifi", context={"source": "reauth", "entry_id": entry.entry_id}, data=entry.data
+    )
+    assert result["step_id"] == "reauth_confirm"
+    with (
+        patch("custom_components.simplifi.config_flow.request_actor", return_value="admin"),
+        patch(
+            "custom_components.simplifi.api.unifi.UniFiGateway.connect",
+            return_value=[{"id": "wrong-site", "name": "Other"}],
+        ),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"api_key": "new-private-key"}
+        )
+    assert result["errors"] == {"base": "setup_failed"} and dict(entry.data) == original
+    with (
+        patch("custom_components.simplifi.config_flow.request_actor", return_value="admin"),
+        patch(
+            "custom_components.simplifi.api.unifi.UniFiGateway.connect",
+            return_value=[{"id": "old-site", "name": "Home"}],
+        ),
+        patch.object(hass.config_entries, "async_reload", return_value=True),
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {"api_key": "new-private-key"}
+        )
+        await hass.async_block_till_done()
+    assert result["reason"] == "reauth_successful"
+    assert dict(entry.data) == {**original, "api_key": "new-private-key"}
+    stored = await HouseholdStorage(hass, entry.entry_id).load(state)
+    assert stored.groups == state.groups

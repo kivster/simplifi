@@ -12,7 +12,7 @@ from .api.unifi import UniFiGateway
 from .const import DOMAIN, PLATFORMS
 from .coordinator import SimpliFiCoordinator
 from .engine import Engine
-from .models import Group, SimpliFiError, State
+from .models import Group, State
 from .services import register_services
 from .storage import HouseholdStorage
 
@@ -43,16 +43,6 @@ async def async_setup_entry(hass, entry):
         )
     )
     if not data["simulation"]:
-        try:
-            sites = await gateway.connect()
-            if data["site"] not in {s["id"] for s in sites}:
-                raise SimpliFiError("Selected site disappeared")
-        except SimpliFiError as error:
-            # The adapter supplies sanitized errors without credentials or response bodies.
-            raise ConfigEntryNotReady(str(error)) from None
-        except TimeoutError:
-            raise ConfigEntryNotReady("The controller connection timed out; will retry") from None
-    if not data["simulation"]:
         from .current_network import CurrentNetworkReader
 
         gateway.current_network_reader = CurrentNetworkReader(hass, gateway)
@@ -81,10 +71,9 @@ async def async_setup_entry(hass, entry):
     try:
         await coordinator.async_config_entry_first_refresh()
     except ConfigEntryNotReady:
-        # Keep supported recovery actions reachable after a restart with a
-        # retained journal. Entities remain unavailable and the writer frozen.
-        if not engine.state.journal and not engine.state.owned:
-            raise
+        # Load saved settings, diagnostics and recovery even with no prior journal.
+        # Coordinator polling retries; control entities remain unconfirmed.
+        pass
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     register_services(hass)
     from .update_runtime import setup_updates

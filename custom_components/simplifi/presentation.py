@@ -6,6 +6,7 @@ from datetime import datetime, time, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from .compatibility import snapshot as compatibility_snapshot
 from .const import STALE_SECONDS, VERSION
 from .group_controls import summary as unblock_summary
 from .models import instant
@@ -25,6 +26,7 @@ async def dashboard_data(hass, entry):
         applications = deepcopy(gateway.applications)
         networks = deepcopy(gateway.networks)
         capabilities = deepcopy(gateway.capabilities)
+        compatibility = compatibility_snapshot(gateway)
         now = engine.clock()
         configuration_confirmed = engine.configuration_confirmed(now)
     fresh = bool(
@@ -220,6 +222,7 @@ async def dashboard_data(hass, entry):
         "dns_views": dns_views,
         "dns_progress": deepcopy(coordinator.dns_progress),
         "capabilities": capabilities,
+        "compatibility": compatibility,
         "protection": protection,
         "coexistence": coexistence,
         "expiry_acknowledged": state.expiry_acknowledged,

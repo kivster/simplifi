@@ -11,6 +11,11 @@ from .models import instant
 
 class SimpliFiBinarySensor(SimpliFiEntity, BinarySensorEntity):
     @property
+    def available(self):
+        # Connection and retained expiry dependency remain useful during outages.
+        return True
+
+    @property
     def is_on(self):
         state = self.state_model
         now = self.coordinator.engine.clock()

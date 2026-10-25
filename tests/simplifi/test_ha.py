@@ -761,8 +761,10 @@ async def test_calendar_and_dashboard_split_repeated_wall_time(hass, entry, hass
     assert data["groups"][0]["next_change"] == (start + timedelta(hours=1, minutes=10)).isoformat()
 
 
-@pytest.mark.parametrize("failure", ["unsupported", "unauthorized", "timeout"])
-async def test_setup_retry_exposes_safe_connection_reason(hass, caplog, failure):
+@pytest.mark.parametrize("failure", ["incompatible", "permission", "timeout"])
+async def test_setup_failure_keeps_saved_ui_loaded_with_safe_connection_reason(
+    hass, caplog, failure
+):
     from unittest.mock import patch
 
     from homeassistant.config_entries import ConfigEntryState
@@ -771,9 +773,9 @@ async def test_setup_retry_exposes_safe_connection_reason(hass, caplog, failure)
     from custom_components.simplifi.models import SimpliFiError
 
     message = {
-        "unsupported": "UniFi Network 10.6.110 is not supported. Check for a SimpliFi update in HACS",
-        "unauthorized": "UniFi rejected the API key (HTTP 401)",
-        "timeout": "The controller connection timed out; will retry",
+        "incompatible": "UniFi returned incompatible site data",
+        "permission": "UniFi denied access (HTTP 403)",
+        "timeout": "The operation timed out",
     }[failure]
     error = (
         TimeoutError("private-timeout-detail") if failure == "timeout" else SimpliFiError(message)
@@ -792,8 +794,12 @@ async def test_setup_retry_exposes_safe_connection_reason(hass, caplog, failure)
     )
     item.add_to_hass(hass)
     with patch("custom_components.simplifi.api.unifi.UniFiGateway.connect", side_effect=error):
-        assert not await hass.config_entries.async_setup(item.entry_id)
+        assert await hass.config_entries.async_setup(item.entry_id)
         await hass.async_block_till_done()
-    assert item.state is ConfigEntryState.SETUP_RETRY
-    assert item.reason == message
-    assert "private" not in caplog.text
+    assert item.state is ConfigEntryState.LOADED
+    assert message in item.runtime_data.engine.state.issue
+    assert not item.runtime_data.last_update_success
+    assert hass.states.get("sensor.simplifi_gateway_compatibility").state == "paused"
+    assert hass.states.get("binary_sensor.simplifi_connected").state == "off"
+    assert "private-timeout-detail" not in caplog.text
+    assert hass.services.has_service("simplifi", "export_configuration")

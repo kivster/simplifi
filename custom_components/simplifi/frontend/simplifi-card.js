@@ -1,4 +1,4 @@
-/* SimpliFi card 0.22.1b1 — backed exclusively by authenticated HA actions. */
+/* SimpliFi card 0.22.2b1 — backed exclusively by authenticated HA actions. */
 const requestId = () => {
   const crypto = globalThis.crypto;
   if (typeof crypto?.randomUUID === "function") return crypto.randomUUID();
@@ -217,9 +217,18 @@ class SimpliFiCard extends HTMLElement {
       html += `<div class="banner error" role="alert">${icon("mdi:alert-circle-outline")}<span>Unable to refresh. ${escape(this._error)} Last observations may be stale.</span></div>`;
     else if (this.data && !this.data.fresh) {
       const reason = typeof this.data.issue === "string" ? this.data.issue.trim() : "";
-      html += `<div class="banner warning" role="status"><span><strong>Controls unavailable.</strong> ${reason ? escape(reason) : "Gateway confirmation is unavailable or stale. Refresh the observations before making changes."}</span></div>`;
+      html += `<div class="banner warning" role="status"><span><strong>Controls unavailable.</strong> ${reason ? escape(reason) : "Gateway confirmation is unavailable or stale. Refresh the observations before making changes."}<small class="block">Saved settings are retained. SimpliFi retries automatically; temporary pauses and allowances may outlast their deadlines while policy updates are paused.</small></span></div>`;
     }
+    const features = this.data?.compatibility?.features || {};
+    const missing = [["category", "Category"], ["application", "App"]].filter(([key]) => features[key] === "unavailable").map(([, label]) => label);
+    if (missing.length)
+      html += `<div class="banner warning" role="status"><span>${escape(missing.join(" and "))} lists are unavailable from UniFi. Those rule editors are unavailable; other controls can continue unless saved rules depend on the missing lists. SimpliFi retries automatically.</span></div>`;
     return html;
+  }
+  compatibilityHTML() {
+    const c = this.data?.compatibility;
+    if (!c || this.data.simulation) return "";
+    return `<p class="note">UniFi Network ${escape(c.application_version || "unknown")} · Gateway checks: ${escape(words(c.status || "not_checked"))}. ${c.checked_at ? "Checked " + escape(this.time(c.checked_at, true)) + "." : ""}</p>`;
   }
   render() {
     if (!this.shadowRoot.querySelector("#content")) {
@@ -335,8 +344,11 @@ class SimpliFiCard extends HTMLElement {
       return c.supported ? "No app-category rule" : "No profile confirmed";
     return c.label || words(c.state);
   }
+  catalogueUnavailable(kind) {
+    return this.data?.capabilities?.[kind] === "unavailable" || this.data?.compatibility?.features?.[kind] === "unavailable";
+  }
   personRestrictionActions(g) {
-    return `<section class="section"><h3>Restrictions</h3><div class="row wrap spacer">${[["application","Block apps"],["domain","Block websites"],["category","Block categories"],["internet","Schedules"]].map(([kind,label]) => this.button(label,"person-rule",g.id,`data-kind="${kind}"`)).join("")}${this.button("Content filtering & SafeSearch","person-protection",g.id)}</div><p class="note">Choose what to restrict on this person’s assigned devices.</p></section>`;
+    return `<section class="section"><h3>Restrictions</h3><div class="row wrap spacer">${[["application","Block apps"],["domain","Block websites"],["category","Block categories"],["internet","Schedules"]].map(([kind,label]) => this.button(label,"person-rule",g.id,`data-kind="${kind}" ${this.catalogueUnavailable(kind) ? "disabled" : ""}`)).join("")}${this.button("Content filtering & SafeSearch","person-protection",g.id)}</div><p class="note">Choose what to restrict on this person’s assigned devices.</p></section>`;
   }
   personProtection(id) {
     const g = this.data.groups.find(g => g.id === id);
@@ -466,7 +478,7 @@ class SimpliFiCard extends HTMLElement {
   }
   ruleCard(r) {
     const exceptions = this.data.exceptions.filter((e) => e.rule === r.id || e.kind === "internet_allow" && e.captured?.includes(r.id));
-    return `<ha-card><div class="row between"><div class="grow"><h3>${escape(r.name)}</h3><small>${escape(words(r.kind))}</small></div><span class="badge ${r.enabled ? (r.active ? "red" : "blue") : ""}">${!r.enabled ? "Disabled" : exceptions.length ? "Exception active" : r.active ? "Active now" : "Scheduled"}</span></div><div class="rule-details"><p>${escape(this.ruleScope(r))}</p><p>${escape((r.target_names || r.targets).join(", ") || "All internet")}</p><p>${escape(this.scheduleLabel(r))}</p>${exceptions.map((e) => `<p>${escape(words(e.kind))} · ${e.group ? escape(this.groupName(e.group)) : "Everyone on this rule"} · ${e.expires_at ? "until " + this.time(e.expires_at) : "until resumed"}</p>`).join("")}</div><div class="row wrap">${this.button("Edit", "rule-edit", r.id)}${this.button("Options", "rule-options", r.id, !r.enabled ? "disabled" : this.disabledAttr())}${this.button(r.enabled ? "Disable" : "Enable", "rule-toggle", r.id, this.disabledAttr(), "quiet")}</div></ha-card>`;
+    return `<ha-card><div class="row between"><div class="grow"><h3>${escape(r.name)}</h3><small>${escape(words(r.kind))}</small></div><span class="badge ${r.enabled ? (r.active ? "red" : "blue") : ""}">${!r.enabled ? "Disabled" : exceptions.length ? "Exception active" : r.active ? "Active now" : "Scheduled"}</span></div><div class="rule-details"><p>${escape(this.ruleScope(r))}</p><p>${escape((r.target_names || r.targets).join(", ") || "All internet")}</p><p>${escape(this.scheduleLabel(r))}</p>${exceptions.map((e) => `<p>${escape(words(e.kind))} · ${e.group ? escape(this.groupName(e.group)) : "Everyone on this rule"} · ${e.expires_at ? "until " + this.time(e.expires_at) : "until resumed"}</p>`).join("")}</div><div class="row wrap">${this.button("Edit", "rule-edit", r.id, this.catalogueUnavailable(r.kind) ? "disabled" : "")}${this.button("Options", "rule-options", r.id, !r.enabled ? "disabled" : this.disabledAttr())}${this.button(r.enabled ? "Disable" : "Enable", "rule-toggle", r.id, this.disabledAttr(), "quiet")}</div></ha-card>`;
   }
   scheduleLabel(r) {
     return r.windows.length
@@ -571,7 +583,7 @@ class SimpliFiCard extends HTMLElement {
         .filter((r) => r.kind !== "internet")
         .map(
           (r) =>
-            `<div class="list-item"><div class="grow"><strong>${escape(r.name)}</strong><small>${escape((r.target_names || r.targets).join(", "))} · ${escape(this.ruleScope(r))}</small></div>${this.button("Edit", "rule-edit", r.id)}</div>`,
+            `<div class="list-item"><div class="grow"><strong>${escape(r.name)}</strong><small>${escape((r.target_names || r.targets).join(", "))} · ${escape(this.ruleScope(r))}</small></div>${this.button("Edit", "rule-edit", r.id, this.catalogueUnavailable(r.kind) ? "disabled" : "")}</div>`,
         )
         .join("") ||
       '<p class="muted">No category, application or website rules yet.</p>'
@@ -608,7 +620,7 @@ class SimpliFiCard extends HTMLElement {
             `<div class="audit-row"><div class="row between"><div class="grow"><strong>${escape(words(c.action))}</strong><small>${escape(c.target_names.join(", "))}</small></div><span class="badge ${["failed", "partial"].includes(c.outcome) ? "red" : c.outcome === "pending" ? "amber" : ""}">${escape(this.changeOutcomeLabel(c))}</span></div><small>${escape(c.actor || "Administrator")} · ${this.time(c.requested_at, true)}${c.reason ? " · " + escape(c.reason) : ""}</small>${this.syncEvidenceHTML(c)}${this.timingHistoryHTML(c)}${this.historyChangeButton(c)}</div>`,
         )
         .join("") || '<div class="empty"><h3>No changes recorded</h3></div>'
-    }<div class="settings"><h3>Administration</h3><p class="note">Integration ${escape(this.data.version)} · ${escape(this.data.sync)} · revision ${this.data.revision}. ${this.data.management ? "Gateway management enabled." : "Gateway management disabled."}</p>${this.data.issue ? `<div class="banner error">${escape(this.data.issue)}</div>` : ""}<div class="row wrap">${this.button("Updates", "updates")}${this.button("Gateway load", "gateway-health")}${this.button("Management", "management")}${this.button("Inspect recovery", "recovery")}${this.button("Manage access", "access")}${this.button("Export configuration", "export")}${this.button("Restore configuration", "import")}<a href="/config/integrations/integration/simplifi">Connection settings</a></div><p class="note">Timed exception expiry needs Home Assistant. Gateway schedules continue during an HA outage, but a temporary pause or allowance may last beyond its deadline.</p></div></ha-card>`;
+    }<div class="settings"><h3>Administration</h3>${this.compatibilityHTML()}<p class="note">Integration ${escape(this.data.version)} · ${escape(this.data.sync)} · revision ${this.data.revision}. ${this.data.management ? "Gateway management enabled." : "Gateway management disabled."}</p>${this.data.issue ? `<div class="banner error">${escape(this.data.issue)}</div>` : ""}<div class="row wrap">${this.button("Updates", "updates")}${this.button("Gateway load", "gateway-health")}${this.button("Management", "management")}${this.button("Inspect recovery", "recovery")}${this.button("Manage access", "access")}${this.button("Export configuration", "export")}${this.button("Restore configuration", "import")}<a href="/config/integrations/integration/simplifi">Connection settings</a></div><p class="note">Timed exception expiry needs Home Assistant. Gateway schedules continue during an HA outage, but a temporary pause or allowance may last beyond its deadline.</p></div></ha-card>`;
   }
   setupForm() {
     this._setupDraft = {name:"", kind:"family", age:"", person:"", devices:[], schedules:[]};
@@ -1232,7 +1244,7 @@ mode: access</pre><p class="note">Use an existing non-administrator account. A n
     const timeline = g.timeline.filter(
       (t) => category === undefined || rules.some((r) => r.id === t.rule_id),
     );
-    const body = `<div class="status ${g.state}">${escape(this.accessLabel(g))}</div><p class="note">${escape(g.reason)}${g.expires_at ? " · until " + this.time(g.expires_at) : ""}</p><div class="actions">${this.personActions(g)}</div>${this.continuousRules(g, rules.map(r => r.id))}<div class="section"><h3>Timed windows today · ${escape(this.data.timezone)}</h3><div class="timeline">${timeline.map((t) => `<button class="time-row" data-action="rule-edit" data-id="${escape(t.rule_id)}" aria-label="${escape(t.name + " " + this.timelineTime(t.start) + " to " + this.timelineEnd(t.end))}"><span class="time-bar" style="left:${Math.max(0, ((Date.parse(t.start) - start) / duration) * 100)}%;width:${Math.min(100, ((Date.parse(t.end) - Date.parse(t.start)) / duration) * 100)}%"></span><span class="time-label">${escape(t.name)} · ${this.timelineTime(t.start)}–${this.timelineEnd(t.end)}${t.lifted_now ? " · exception now" : ""}</span></button>`).join("") || '<p class="muted">No timed restrictions today.</p>'}</div><div class="time-axis"><span>00:00</span><span>${this.timelineMiddle()}</span><span>24:00</span></div><p class="note">${this.clockChangeDay ? "Clock change today: UTC offsets distinguish repeated times. " : ""}Projected windows; temporary exceptions and confirmed gateway state are shown separately.</p></div><div class="section"><h3>Rules</h3><div class="list">${rules.map((r) => `<div class="list-item"><div class="grow"><strong>${escape(r.name)}</strong><small>${escape(this.scheduleLabel(r))}</small></div>${this.button("Edit", "rule-edit", r.id)}${this.button(r.networks?.length ? "Network options" : "Options for " + g.name, "rule-options", r.id, (!r.enabled ? "disabled" : this.disabledAttr()) + (r.groups.includes(id) ? ` data-group="${escape(id)}"` : ""))}</div>`).join("") || '<p class="muted">No matching rules.</p>'}</div></div><div class="section"><h3>Devices</h3><div class="list">${
+    const body = `<div class="status ${g.state}">${escape(this.accessLabel(g))}</div><p class="note">${escape(g.reason)}${g.expires_at ? " · until " + this.time(g.expires_at) : ""}</p><div class="actions">${this.personActions(g)}</div>${this.continuousRules(g, rules.map(r => r.id))}<div class="section"><h3>Timed windows today · ${escape(this.data.timezone)}</h3><div class="timeline">${timeline.map((t) => `<button class="time-row" data-action="rule-edit" data-id="${escape(t.rule_id)}" aria-label="${escape(t.name + " " + this.timelineTime(t.start) + " to " + this.timelineEnd(t.end))}"><span class="time-bar" style="left:${Math.max(0, ((Date.parse(t.start) - start) / duration) * 100)}%;width:${Math.min(100, ((Date.parse(t.end) - Date.parse(t.start)) / duration) * 100)}%"></span><span class="time-label">${escape(t.name)} · ${this.timelineTime(t.start)}–${this.timelineEnd(t.end)}${t.lifted_now ? " · exception now" : ""}</span></button>`).join("") || '<p class="muted">No timed restrictions today.</p>'}</div><div class="time-axis"><span>00:00</span><span>${this.timelineMiddle()}</span><span>24:00</span></div><p class="note">${this.clockChangeDay ? "Clock change today: UTC offsets distinguish repeated times. " : ""}Projected windows; temporary exceptions and confirmed gateway state are shown separately.</p></div><div class="section"><h3>Rules</h3><div class="list">${rules.map((r) => `<div class="list-item"><div class="grow"><strong>${escape(r.name)}</strong><small>${escape(this.scheduleLabel(r))}</small></div>${this.button("Edit", "rule-edit", r.id, this.catalogueUnavailable(r.kind) ? "disabled" : "")}${this.button(r.networks?.length ? "Network options" : "Options for " + g.name, "rule-options", r.id, (!r.enabled ? "disabled" : this.disabledAttr()) + (r.groups.includes(id) ? ` data-group="${escape(id)}"` : ""))}</div>`).join("") || '<p class="muted">No matching rules.</p>'}</div></div><div class="section"><h3>Devices</h3><div class="list">${
       this.data.devices
         .filter((d) => d.group === id)
         .map((d) => this.deviceRow(d))
@@ -1396,6 +1408,7 @@ mode: access</pre><p class="note">Use an existing non-administrator account. A n
       : rule.groups.map(g => this.groupName(g)).join(", ");
   }
   ruleForm(rule) {
+    if (rule && this.catalogueUnavailable(rule.kind)) throw new Error("UniFi's app/category list is unavailable. SimpliFi will retry automatically; this rule's saved settings are retained.");
     this._draft = structuredClone(
       rule || {
         name: "",
@@ -1434,7 +1447,7 @@ mode: access</pre><p class="note">Use an existing non-administrator account. A n
             ["category", "An application category"],
             ["application", "Specific applications"],
             ["domain", "Websites"],
-          ],
+          ].filter(([kind]) => !this.catalogueUnavailable(kind)),
           d.kind,
           Boolean(d.id),
         );

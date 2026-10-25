@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.22.2b1 — 2026-10-25
+
+- Replace the exact UniFi version gate with runtime API contract checks. Unknown application versions remain usable when required API responses pass validation.
+- Keep saved settings, dashboard, connection status and diagnostics accessible during connection or compatibility failures, with automatic polling recovery.
+- Isolate missing app/category catalogues and malformed DHCP DNS metadata. Pause the shared policy plan when a saved rule depends on a missing catalogue; never delete its existing policies as a fallback.
+- Add gateway compatibility diagnostics and a status entity. Distinguish rejected API keys from outages and provide native same-controller/site reauthentication.
+- Retain strict ownership checks, complete reads, durable write receipts and verification after mutations.
+
 ## 0.22.1b1 — 2026-10-25
 
 - Support UniFi Network 10.6.109 alongside 10.6.106 so a gateway patch update no longer prevents integration startup. Other versions still require compatibility validation.

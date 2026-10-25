@@ -8,6 +8,7 @@ from time import monotonic
 from typing import Any
 
 from homeassistant.core import callback
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_point_in_utc_time
@@ -18,7 +19,7 @@ from .const import DOMAIN
 from .dns_checks import QueryCache, due_claim, run_probe, simulated_probe
 from .dns_context import jobs
 from .gateway_health import GatewayHealth
-from .models import SimpliFiError, fingerprint, instant
+from .models import GatewayAuthenticationError, SimpliFiError, fingerprint, instant
 from .protection import ProtectionReader
 from .storage import HouseholdStorage
 
@@ -162,6 +163,8 @@ class SimpliFiCoordinator(DataUpdateCoordinator):
         except (SimpliFiError, TimeoutError) as err:
             if self.closing:
                 raise UpdateFailed("SimpliFi is stopping") from None
+            if isinstance(err, GatewayAuthenticationError):
+                raise ConfigEntryAuthFailed(str(err)) from None
             from .inventory import InventoryScopeError
 
             ir.async_create_issue(

@@ -40,3 +40,29 @@ test('current confirmation clears the warning and transport errors retain priori
   assert.ok(c.warnings().includes(c._error));
   assert.ok(!c.warnings().includes(c.data.issue));
 });
+
+test('a missing optional catalogue explains the limitation without disabling independent controls', () => {
+  const c = Object.create(Card.prototype);
+  c.data = {fresh: true, management: true, compatibility: {status: 'limited', features: {application: 'unavailable'}}};
+  assert.match(c.warnings(), /App lists are unavailable/);
+  assert.match(c.warnings(), /other controls can continue/);
+  assert.equal(c.disabled, false);
+  c.data.compatibility.features.application = 'available';
+  assert.equal(c.warnings(), '');
+});
+
+test('paused updates explain retained settings and overdue exception risk', () => {
+  const c = Object.create(Card.prototype);
+  c.data = {fresh: false, issue: 'Firewall response changed'};
+  assert.match(c.warnings(), /Saved settings are retained/);
+  assert.match(c.warnings(), /may outlast their deadlines/);
+});
+
+test('unknown versions are informational and cannot inject markup', () => {
+  const c = Object.create(Card.prototype);
+  c.data = {fresh: true, compatibility: {status: 'available', application_version: '99.0.1', tested_version: false}};
+  assert.equal(c.warnings(), '');
+  assert.match(c.compatibilityHTML(), /99\.0\.1/);
+  c.data.compatibility.application_version = '<img src=x>';
+  assert.ok(!c.compatibilityHTML().includes('<img'));
+});

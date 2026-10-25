@@ -10,6 +10,7 @@ from typing import Any
 from .actions import DNS_ACTIONS, SCHEMAS
 from .const import STALE_SECONDS
 from .models import (
+    CapabilityError,
     Conflict,
     ExceptionRecord,
     Group,
@@ -476,6 +477,10 @@ class Engine:
                     windows.append(Window(**{**w, "id": w.get("id") or uid()}))
                 except TypeError:
                     raise SimpliFiError("Invalid window fields") from None
+            if self.gateway.capabilities.get(p["kind"]) == "unavailable":
+                raise CapabilityError(
+                    "The required UniFi catalogue is unavailable; retry after SimpliFi reconnects"
+                )
             if p["kind"] in ("category", "application") and any(
                 t not in self.gateway.catalogues.get(p["kind"], set()) for t in targets
             ):
@@ -833,6 +838,11 @@ class Engine:
             ]
             stage = "device discovery"
             try:
+                begin_read = getattr(self.gateway, "begin_read", None)
+                if begin_read:
+                    stage = "gateway connection"
+                    await begin_read()
+                stage = "device discovery"
                 clients = await self.gateway.discover()
                 candidate = deepcopy(state)
                 for device in candidate.devices.values():
@@ -870,6 +880,9 @@ class Engine:
                 self.state = state = candidate
                 if state.management:
                     stage = "planning restrictions"
+                    catalogue_check = getattr(self.gateway, "require_rule_catalogues", None)
+                    if catalogue_check:
+                        catalogue_check(state.rules)
                     desired = plan(
                         state,
                         self.gateway.networks,
@@ -884,6 +897,9 @@ class Engine:
                     stage = "policy reconciliation"
                     await self.reconciler.apply(state, desired, now)
                 else:
+                    if begin_read:
+                        stage = "firewall compatibility check"
+                        await self.gateway.list_policies()
                     state.sync_status = "management_disabled"
                     state.issue = None
                     for c in state.changes:
@@ -891,6 +907,9 @@ class Engine:
                             c["outcome"] = "saved_management_disabled"
                 stage = "saving sync results"
                 await self.save(state)
+                finish_read = getattr(self.gateway, "finish_read", None)
+                if finish_read:
+                    finish_read()
             except (SimpliFiError, TimeoutError) as err:
                 state.inventory_complete = False
                 state.sync_status = "partial" if state.owned else "failed"
@@ -898,6 +917,9 @@ class Engine:
                 # HA actions. Never expose raw transport exception text here.
                 reason = str(err) if isinstance(err, SimpliFiError) else "The operation timed out"
                 state.issue = f"Sync unconfirmed during {stage}: {reason}"
+                finish_read = getattr(self.gateway, "finish_read", None)
+                if finish_read:
+                    finish_read(err if isinstance(err, SimpliFiError) else SimpliFiError(reason))
                 for c in state.changes:
                     if c["revision"] == state.revision and c["outcome"] == "pending":
                         c["outcome"] = "failed"

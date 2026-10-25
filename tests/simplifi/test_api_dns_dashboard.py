@@ -293,15 +293,17 @@ async def test_connect_accepts_validated_versions_and_resolves_selected_site(ver
     gateway.pages.assert_awaited_once_with("/v1/sites", cap=100)
 
 
-@pytest.mark.parametrize("version", ["10.6.110", "11.0.0", None, {}, "private-response-content"])
-async def test_connect_rejects_unvalidated_versions_before_site_access_with_safe_reason(version):
+@pytest.mark.parametrize(
+    "version", ["10.6.110", "11.0.0", "12.1.9-beta.2", None, {}, "private-response-content"]
+)
+async def test_connect_accepts_unknown_versions_without_echoing_arbitrary_content(version):
     gateway = UniFiGateway(None, "https://example.local", "private-key")
     gateway.request = AsyncMock(return_value={"applicationVersion": version})
-    gateway.pages = AsyncMock()
-    with pytest.raises(SimpliFiError, match="Supported versions: 10.6.106, 10.6.109") as exc:
-        await gateway.connect()
-    assert "private" not in str(exc.value)
-    assert "HACS" in str(exc.value)
-    if version in ("10.6.110", "11.0.0"):
-        assert version in str(exc.value)
-    gateway.pages.assert_not_awaited()
+    gateway.pages = AsyncMock(return_value=[{"id": "site", "name": "Home"}])
+    assert await gateway.connect() == [{"id": "site", "name": "Home"}]
+    assert not gateway.compatibility["tested_version"]
+    assert "private" not in json.dumps(gateway.compatibility)
+    assert gateway.version == (
+        version if isinstance(version, str) and version[0].isdigit() else "unknown"
+    )
+    gateway.pages.assert_awaited_once()

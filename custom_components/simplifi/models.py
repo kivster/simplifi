@@ -19,6 +19,10 @@ class SimpliFiError(Exception):
     """A safe, user-facing error; never includes an HTTP body or credentials."""
 
 
+class GatewayAuthenticationError(SimpliFiError):
+    """The gateway rejected the saved API credential."""
+
+
 class Conflict(SimpliFiError):
     """Concurrent edit, ownership drift or unresolved external write."""
 
