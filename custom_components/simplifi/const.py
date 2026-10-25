@@ -1,7 +1,7 @@
 """Integration constants."""
 
 DOMAIN = "simplifi"
-VERSION = "0.22.0b1"
+VERSION = "0.22.1b1"
 SCHEMA_VERSION = 1
 PLATFORMS = ["sensor", "binary_sensor", "switch", "calendar"]
 MAX_DURATION_MINUTES = 10080

@@ -759,3 +759,41 @@ async def test_calendar_and_dashboard_split_repeated_wall_time(hass, entry, hass
     data = await dashboard_data(hass, entry)
     assert not data["rules"][0]["active"]
     assert data["groups"][0]["next_change"] == (start + timedelta(hours=1, minutes=10)).isoformat()
+
+
+@pytest.mark.parametrize("failure", ["unsupported", "unauthorized", "timeout"])
+async def test_setup_retry_exposes_safe_connection_reason(hass, caplog, failure):
+    from unittest.mock import patch
+
+    from homeassistant.config_entries import ConfigEntryState
+    from pytest_homeassistant_custom_component.common import MockConfigEntry
+
+    from custom_components.simplifi.models import SimpliFiError
+
+    message = {
+        "unsupported": "UniFi Network 10.6.110 is not supported. Check for a SimpliFi update in HACS",
+        "unauthorized": "UniFi rejected the API key (HTTP 401)",
+        "timeout": "The controller connection timed out; will retry",
+    }[failure]
+    error = (
+        TimeoutError("private-timeout-detail") if failure == "timeout" else SimpliFiError(message)
+    )
+    item = MockConfigEntry(
+        domain="simplifi",
+        data={
+            "simulation": False,
+            "controller": "https://example.local",
+            "api_key": "private-key",
+            "site": "site",
+            "networks": ["family"],
+            "external_zone": "external",
+            "timezone": "Europe/London",
+        },
+    )
+    item.add_to_hass(hass)
+    with patch("custom_components.simplifi.api.unifi.UniFiGateway.connect", side_effect=error):
+        assert not await hass.config_entries.async_setup(item.entry_id)
+        await hass.async_block_till_done()
+    assert item.state is ConfigEntryState.SETUP_RETRY
+    assert item.reason == message
+    assert "private" not in caplog.text
