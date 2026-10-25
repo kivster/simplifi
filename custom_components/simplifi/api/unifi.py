@@ -6,6 +6,7 @@ All HTTP response bodies are excluded from errors to avoid credential leakage.
 
 import asyncio
 import ipaddress
+import re
 from typing import Any
 from urllib.parse import quote, urlsplit
 
@@ -22,6 +23,7 @@ from ..inventory import (
 from ..models import CapabilityError, Device, SimpliFiError, instant, mac_address, utcnow
 from ..request_meter import MeteredSession, RequestMeter
 
+SUPPORTED_NETWORK_VERSIONS = ("10.6.106", "10.6.109")
 DISCOVERY_RETRY_TIMEOUT = 30
 
 
@@ -208,8 +210,19 @@ class UniFiGateway:
         self.version = (
             info.get("applicationVersion", "unknown") if isinstance(info, dict) else "unknown"
         )
-        if self.version != "10.6.106":
-            raise CapabilityError("This build supports the documented Network 10.6.106 API only")
+        if self.version not in SUPPORTED_NETWORK_VERSIONS:
+            # Only display a bounded version number, never arbitrary response content.
+            detected = (
+                self.version
+                if isinstance(self.version, str)
+                and re.fullmatch(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}", self.version)
+                else "unknown"
+            )
+            supported = ", ".join(SUPPORTED_NETWORK_VERSIONS)
+            raise CapabilityError(
+                f"UniFi Network {detected} is not supported by this SimpliFi version. "
+                f"Supported versions: {supported}. Check for a SimpliFi update in HACS"
+            )
         sites = await self.pages("/v1/sites", cap=100)
         if not sites:
             raise SimpliFiError(

@@ -23,7 +23,7 @@ The dashboard has Family, Devices, Rules, Filtering and Activity views. Its Love
 
 ## Installation
 
-Requires Home Assistant 2026.10.1 or later for the currently validated development environment, plus a compatible UniFi Network local Integration API. Live features depend on the controller's endpoints, permissions and firmware. Start with the simulator or observation mode to check compatibility.
+Requires Home Assistant 2026.10.1 or later for the currently validated development environment, plus the UniFi Network local Integration API on 10.6.106 or 10.6.109. Live features depend on the controller's endpoints, permissions and firmware. Start with the simulator or observation mode to check compatibility.
 
 1. In HACS, add `https://github.com/kivster/simplifi` as a custom repository of type **Integration**.
 2. Enable beta releases for the repository, download **SimpliFi** and restart Home Assistant.

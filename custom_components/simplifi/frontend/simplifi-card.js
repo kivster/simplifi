@@ -1,4 +1,4 @@
-/* SimpliFi card 0.22.0b1 — backed exclusively by authenticated HA actions. */
+/* SimpliFi card 0.22.1b1 — backed exclusively by authenticated HA actions. */
 const requestId = () => {
   const crypto = globalThis.crypto;
   if (typeof crypto?.randomUUID === "function") return crypto.randomUUID();

@@ -280,3 +280,28 @@ async def test_connect_reports_empty_site_permissions():
     gateway.pages = AsyncMock(return_value=[])
     with pytest.raises(SimpliFiError, match="no accessible sites"):
         await gateway.connect()
+
+
+@pytest.mark.parametrize("version", ["10.6.106", "10.6.109"])
+async def test_connect_accepts_validated_versions_and_resolves_selected_site(version):
+    gateway = UniFiGateway(None, "https://example.local", "test", site="site")
+    gateway.request = AsyncMock(return_value={"applicationVersion": version})
+    sites = [{"id": "site", "name": "Home", "internalReference": "default"}]
+    gateway.pages = AsyncMock(return_value=sites)
+    assert await gateway.connect() == sites
+    assert gateway.version == version and gateway.legacy_site == "default"
+    gateway.pages.assert_awaited_once_with("/v1/sites", cap=100)
+
+
+@pytest.mark.parametrize("version", ["10.6.110", "11.0.0", None, {}, "private-response-content"])
+async def test_connect_rejects_unvalidated_versions_before_site_access_with_safe_reason(version):
+    gateway = UniFiGateway(None, "https://example.local", "private-key")
+    gateway.request = AsyncMock(return_value={"applicationVersion": version})
+    gateway.pages = AsyncMock()
+    with pytest.raises(SimpliFiError, match="Supported versions: 10.6.106, 10.6.109") as exc:
+        await gateway.connect()
+    assert "private" not in str(exc.value)
+    assert "HACS" in str(exc.value)
+    if version in ("10.6.110", "11.0.0"):
+        assert version in str(exc.value)
+    gateway.pages.assert_not_awaited()

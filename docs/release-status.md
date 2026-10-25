@@ -1,6 +1,12 @@
-# Release status — 0.22.0b1
+# Release status — 0.22.1b1
 
 SimpliFi is a beta custom integration for Home Assistant. Install it as a custom HACS repository or manually; it is not included in HACS's default catalogue.
+
+## Gateway patch compatibility
+
+Version 0.22.1b1 accepts UniFi Network 10.6.106 and 10.6.109. A strict single-version check previously stopped setup after a gateway update to 10.6.109, even when its API was available. Unvalidated versions remain blocked, and setup retries now show the sanitized connection or compatibility reason.
+
+Read-only checks against 10.6.109 exercised the adapter's network details, system External zone validation, DPI catalogues, site, client and firewall-policy pagination. These checks do not establish physical-device enforcement or validate arbitrary future gateway versions.
 
 ## Included in this release
 

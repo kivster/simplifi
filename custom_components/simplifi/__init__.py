@@ -47,8 +47,11 @@ async def async_setup_entry(hass, entry):
             sites = await gateway.connect()
             if data["site"] not in {s["id"] for s in sites}:
                 raise SimpliFiError("Selected site disappeared")
-        except SimpliFiError, TimeoutError:
-            raise ConfigEntryNotReady("Gateway API unavailable or unsupported") from None
+        except SimpliFiError as error:
+            # The adapter supplies sanitized errors without credentials or response bodies.
+            raise ConfigEntryNotReady(str(error)) from None
+        except TimeoutError:
+            raise ConfigEntryNotReady("The controller connection timed out; will retry") from None
     if not data["simulation"]:
         from .current_network import CurrentNetworkReader
 

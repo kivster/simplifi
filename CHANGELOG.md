@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.22.1b1 — 2026-10-25
+
+- Support UniFi Network 10.6.109 alongside 10.6.106 so a gateway patch update no longer prevents integration startup. Other versions still require compatibility validation.
+- Show the sanitized gateway connection error during setup retries, including the detected and supported versions, instead of a generic unavailable-or-unsupported message.
+
 ## 0.21.0b1 — 2026-10-18
 
 - Preserve an existing manual internet pause when a temporary internet allowance is saved. Resume (or the pause's own deadline) ends that pause; a still-active allowance can then apply for its remaining time. A new pause still cancels the allowance.
