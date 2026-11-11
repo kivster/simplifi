@@ -162,10 +162,10 @@ def test_replacement_body_overlays_owned_fields_and_keeps_server_keys(report_flo
     original = deepcopy(current)
     replaced = replacement_body(current, owned)
     assert replaced["reportFlowEnabled"] is report_flow
-    assert replaced["futureFlag"] == "keep-me"
-    assert replaced["index"] == 9 and replaced["metadata"]["origin"] == "USER_DEFINED"
     assert replaced["enabled"] is False and "schedule" not in replaced
-    assert replaced["id"] == current["id"]
+    for excluded in ("id", "index", "metadata", "futureFlag"):
+        assert excluded not in replaced
+    assert "keep-me" not in str(replaced)
     assert current == original
     ignored, unknown = non_owned_policy_fields(current)
     assert ignored == ["futureFlag", "id", "index", "metadata", "reportFlowEnabled"]

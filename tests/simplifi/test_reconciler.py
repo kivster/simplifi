@@ -203,6 +203,8 @@ async def test_owned_update_preserves_report_flow_and_unknown_keys(household, ca
     for policy in gateway.policies.values():
         policy["reportFlowEnabled"] = report_flow
         policy["futureFlag"] = "keep-me"
+        policy["index"] = 3
+        policy["metadata"] = {"origin": "USER_DEFINED"}
     sent = []
     update = gateway.update
 
@@ -211,13 +213,25 @@ async def test_owned_update_preserves_report_flow_and_unknown_keys(household, ca
         return await update(policy_id, body)
 
     gateway.update = capture
-    caplog.set_level("INFO")
+    caplog.set_level("DEBUG")
     await engine.refresh()
     assert sent == [] and engine.state.sync_status == "applied" and engine.state.issue is None
-    notes = [r for r in caplog.records if r.message.startswith("SimpliFi ignored non-owned")]
-    warnings = [r for r in caplog.records if r.message.startswith("SimpliFi ignored unrecognized")]
+    notes = [
+        r
+        for r in caplog.records
+        if r.levelname == "DEBUG" and r.message.startswith("SimpliFi ignored non-owned")
+    ]
+    warnings = [
+        r
+        for r in caplog.records
+        if r.levelname == "WARNING" and r.message.startswith("SimpliFi ignored unrecognized")
+    ]
     assert len(notes) == len(gateway.policies)
     assert len(warnings) == len(gateway.policies)
+    assert not any(
+        r.levelname == "INFO" and r.message.startswith("SimpliFi ignored non-owned")
+        for r in caplog.records
+    )
     assert all("futureFlag" in r.message and "keep-me" not in r.message for r in warnings)
     assert all("reportFlowEnabled" not in r.message for r in warnings)
     assert "keep-me" not in caplog.text
@@ -226,8 +240,9 @@ async def test_owned_update_preserves_report_flow_and_unknown_keys(household, ca
     await engine.refresh()
     assert sent and engine.state.sync_status == "applied"
     for body in sent:
-        assert body["reportFlowEnabled"] is report_flow and body["futureFlag"] == "keep-me"
-        assert body["enabled"] is False
+        assert body["reportFlowEnabled"] is report_flow and body["enabled"] is False
+        for excluded in ("id", "index", "metadata", "futureFlag"):
+            assert excluded not in body
     for policy in gateway.policies.values():
-        assert policy["reportFlowEnabled"] is report_flow and policy["futureFlag"] == "keep-me"
-        assert policy["enabled"] is False
+        assert policy["reportFlowEnabled"] is report_flow and policy["enabled"] is False
+        assert "futureFlag" not in policy and "index" not in policy and "metadata" not in policy

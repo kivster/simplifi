@@ -81,11 +81,11 @@ class Reconciler:
                 raise Conflict("Owned-policy record belongs to another controller")
             current = actual.get(record["id"])
             if current and record["id"] not in seen:
-                # One info line per policy per reconcile. Names only; values stay out.
+                # One debug line per policy per reconcile. Names only; values stay out.
                 seen.add(record["id"])
                 ignored, unknown = non_owned_policy_fields(current)
                 if ignored:
-                    _LOGGER.info(
+                    _LOGGER.debug(
                         "SimpliFi ignored non-owned policy fields: %s",
                         ", ".join(ignored),
                     )

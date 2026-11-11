@@ -305,30 +305,27 @@ OWNED_POLICY_FIELDS = frozenset(
     }
 )
 _MAX_DIFFERENCE_PATHS = 12
-# Server keys that are not edits. reportFlowEnabled arrived in Network 11.0.89.
-# id, index and metadata have always been assigned by the controller.
-KNOWN_SERVER_POLICY_FIELDS = (
-    "reportFlowEnabled",
-    "id",
-    "index",
-    "metadata",
-)
+# Copied from the live policy onto a replacing PUT. reportFlowEnabled arrived
+# in Network 11.0.89 and the Integration API accepts it on that request.
+KNOWN_SERVER_POLICY_FIELDS = ("reportFlowEnabled",)
 _KNOWN_SERVER_POLICY_FIELDS = frozenset(KNOWN_SERVER_POLICY_FIELDS)
+# Read-only output. PUT has been seen to reject index as an unknown property.
+_READ_ONLY_POLICY_FIELDS = frozenset({"id", "index", "metadata"})
 
 
 def replacement_body(current: dict, owned: dict) -> dict:
-    """Live policy with the fields SimpliFi writes overlaid.
+    """Fields SimpliFi writes, plus known server keys the PUT schema accepts.
 
-    UniFi PUT replaces the policy. Copying the live object first keeps
-    server-added keys such as reportFlowEnabled. Owned keys absent from the
-    desired body are removed, so an old schedule is not left behind.
+    UniFi PUT replaces the policy and rejects read-only output such as index.
+    id, index, metadata and unrecognized keys are left off the request.
+    A known server key is copied only when the live policy has it, including
+    a false value. Owned keys absent from the desired body are omitted, so an
+    old schedule is not left behind.
     """
-    body = deepcopy(current)
-    for key in OWNED_POLICY_FIELDS:
-        if key in owned:
-            body[key] = deepcopy(owned[key])
-        else:
-            body.pop(key, None)
+    body = {key: deepcopy(owned[key]) for key in OWNED_POLICY_FIELDS if key in owned}
+    for key in KNOWN_SERVER_POLICY_FIELDS:
+        if key in current and current[key] is not None:
+            body[key] = deepcopy(current[key])
     return body
 
 
@@ -346,7 +343,11 @@ def non_owned_policy_fields(policy: dict) -> tuple[list[str], list[str]]:
         label = _field_label(key)
         if label not in ignored:
             ignored.append(label)
-        if key not in _KNOWN_SERVER_POLICY_FIELDS and label not in unknown:
+        if (
+            key not in _KNOWN_SERVER_POLICY_FIELDS
+            and key not in _READ_ONLY_POLICY_FIELDS
+            and label not in unknown
+        ):
             unknown.append(label)
     ignored.sort()
     unknown.sort()

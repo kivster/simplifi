@@ -64,8 +64,9 @@ def validate_policy(row):
     # Foreign policies may use selectors SimpliFi never writes. Validate their
     # shared envelope and retain unknown fields on the read model. Ownership
     # comparison uses the fields SimpliFi writes, so a server-added key is not
-    # an external edit. A replacing PUT starts from the live policy and overlays
-    # those written fields. A nested change inside a written field still fails
+    # an external edit. A replacing PUT sends the written fields plus known
+    # server keys such as reportFlowEnabled, and omits id, index, metadata and
+    # unrecognized keys. A nested change inside a written field still fails
     # readback and is not treated as proof of the requested policy.
     require(
         identity(row.get("id"))
