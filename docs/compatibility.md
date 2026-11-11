@@ -8,7 +8,7 @@ Every normal refresh rereads application information and accessible sites, then 
 
 The system-defined External zone is still required. The adapter does not guess that an arbitrary empty zone means the internet. Ambiguous client-network mapping still pauses writes.
 
-Policy changes retain the existing ownership checks, full readback, durable operation journal and uncertain-request handling. Unknown operational fields on an owned policy are not silently removed or ignored: a mismatch pauses automation for inspection. Successful reads are not proof of write compatibility or physical-device enforcement. No test firewall rules are created during compatibility detection.
+Policy changes retain the existing ownership checks, full readback, durable operation journal and uncertain-request handling. Ownership comparison covers the fields SimpliFi writes. A server-added key that SimpliFi does not write, such as Network 11 `reportFlowEnabled`, is not an external edit and is left in place by a no-op reconcile. UniFi PUT replaces the whole policy and rejects read-only output such as `index`. An update sends the fields SimpliFi writes plus known server keys, starting with `reportFlowEnabled`, and omits `id`, `index`, `metadata` and unrecognized keys. Each reconcile logs ignored top-level field names at debug, once per policy, and logs a warning for an unrecognized key without failing the sync. A change inside a written field, including an unexpected nested key, still pauses automation and names those field paths in diagnostics. Successful reads are not proof of write compatibility or physical-device enforcement. No test firewall rules are created during compatibility detection.
 
 ## When something changes
 

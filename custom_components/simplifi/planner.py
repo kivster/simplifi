@@ -1,5 +1,6 @@
 """Explicit network scope for every policy; group rules additionally require a MAC."""
 
+from copy import deepcopy
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -285,6 +286,74 @@ def plan(
     return result
 
 
+# Top-level keys SimpliFi writes. UniFi may add read-only keys on readback
+# (Network 11.0.89+ reportFlowEnabled, and later additions). Those are not
+# edits of an owned policy. id, index and metadata stay outside this set.
+# Nested changes inside a written field, including keys SimpliFi did not write,
+# still count. Raw receipts keep hashing the stored body unchanged.
+OWNED_POLICY_FIELDS = frozenset(
+    {
+        "name",
+        "description",
+        "enabled",
+        "action",
+        "source",
+        "destination",
+        "ipProtocolScope",
+        "loggingEnabled",
+        "schedule",
+    }
+)
+_MAX_DIFFERENCE_PATHS = 12
+# Copied from the live policy onto a replacing PUT. reportFlowEnabled arrived
+# in Network 11.0.89 and the Integration API accepts it on that request.
+KNOWN_SERVER_POLICY_FIELDS = ("reportFlowEnabled",)
+_KNOWN_SERVER_POLICY_FIELDS = frozenset(KNOWN_SERVER_POLICY_FIELDS)
+# Read-only output. PUT has been seen to reject index as an unknown property.
+_READ_ONLY_POLICY_FIELDS = frozenset({"id", "index", "metadata"})
+
+
+def replacement_body(current: dict, owned: dict) -> dict:
+    """Fields SimpliFi writes, plus known server keys the PUT schema accepts.
+
+    UniFi PUT replaces the policy and rejects read-only output such as index.
+    id, index, metadata and unrecognized keys are left off the request.
+    A known server key is copied only when the live policy has it, including
+    a false value. Owned keys absent from the desired body are omitted, so an
+    old schedule is not left behind.
+    """
+    body = {key: deepcopy(owned[key]) for key in OWNED_POLICY_FIELDS if key in owned}
+    for key in KNOWN_SERVER_POLICY_FIELDS:
+        if key in current and current[key] is not None:
+            body[key] = deepcopy(current[key])
+    return body
+
+
+def non_owned_policy_fields(policy: dict) -> tuple[list[str], list[str]]:
+    """Deduplicated safe names of ignored top-level keys, then the unknown subset.
+
+    Values are never included. A key that is not a plain identifier is reported
+    as ``unrecognized`` so the log cannot carry an arbitrary string.
+    """
+    ignored: list[str] = []
+    unknown: list[str] = []
+    for key in policy:
+        if key in OWNED_POLICY_FIELDS:
+            continue
+        label = _field_label(key)
+        if label not in ignored:
+            ignored.append(label)
+        if (
+            key not in _KNOWN_SERVER_POLICY_FIELDS
+            and key not in _READ_ONLY_POLICY_FIELDS
+            and label not in unknown
+        ):
+            unknown.append(label)
+    ignored.sort()
+    unknown.sort()
+    return ignored, unknown
+
+
 def policy_fingerprint(policy: dict) -> str:
     return fingerprint(
         {k: v for k, v in policy.items() if k not in ("id", "index", "metadata") and v is not None}
@@ -293,7 +362,7 @@ def policy_fingerprint(policy: dict) -> str:
 
 def _comparison_fields(policy: dict) -> dict:
     fields = {
-        k: v for k, v in policy.items() if k not in ("id", "index", "metadata") and v is not None
+        key: policy[key] for key in OWNED_POLICY_FIELDS if key in policy and policy[key] is not None
     }
     schedule = fields.get("schedule")
     if isinstance(schedule, dict) and schedule.get("mode") == "EVERY_WEEK":
@@ -305,16 +374,68 @@ def _comparison_fields(policy: dict) -> dict:
             and all(isinstance(day, str) and day in weekdays for day in days)
             and len(days) == len(set(days))
         ):
-            # UniFi returns Sunday first. Only this documented set is unordered;
-            # selectors, unknown fields, times and malformed schedules stay strict.
+            # UniFi returns Sunday first. Only this documented set is unordered.
+            # Selectors, times and unexpected keys inside the schedule stay strict.
             fields["schedule"] = {**schedule, "repeatOnDays": sorted(days)}
     return fields
 
 
+def _field_label(key: object) -> str:
+    if isinstance(key, str) and key.isidentifier() and len(key) <= 64:
+        return key
+    return "unrecognized"
+
+
+def _diff_paths(left: Any, right: Any, prefix: str) -> list[str]:
+    if isinstance(left, dict) and isinstance(right, dict):
+        paths: list[str] = []
+        for key in set(left) | set(right):
+            label = _field_label(key)
+            child = f"{prefix}.{label}" if prefix else label
+            # Missing is not the same as an explicit null. .get() would hide that.
+            if key not in left or key not in right:
+                paths.append(child)
+                continue
+            paths.extend(_diff_paths(left[key], right[key], child))
+        return paths
+    if left == right:
+        return []
+    # Lists stay at the field path so domain names and weekdays are not logged.
+    return [prefix or "owned fields"]
+
+
+def policy_difference(actual: dict | None, recorded: dict | None) -> list[str]:
+    """Owned-field paths whose comparison values differ. Values are omitted."""
+    if not isinstance(actual, dict) or not isinstance(recorded, dict):
+        return ["policy body"]
+    paths: list[str] = []
+    for path in _diff_paths(_comparison_fields(actual), _comparison_fields(recorded), ""):
+        if path not in paths:
+            paths.append(path)
+    paths.sort()
+    if len(paths) > _MAX_DIFFERENCE_PATHS:
+        return paths[:_MAX_DIFFERENCE_PATHS] + ["additional fields"]
+    return paths
+
+
+def policy_mismatch_fields(actual: dict | None, recorded: dict | None, receipt: str) -> list[str]:
+    """Why policy_matches failed, as safe field paths. Empty when it matches."""
+    if not isinstance(actual, dict) or not isinstance(recorded, dict):
+        return ["policy body"]
+    if not isinstance(receipt, str) or policy_fingerprint(recorded) != receipt:
+        return ["stored receipt"]
+    return policy_difference(actual, recorded)
+
+
+def format_policy_mismatch(actual: dict | None, recorded: dict | None, receipt: str) -> str:
+    fields = policy_mismatch_fields(actual, recorded, receipt)
+    return "differing fields: " + ", ".join(fields) if fields else ""
+
+
 def policy_matches(actual: dict | None, recorded: dict | None, receipt: str) -> bool:
-    """Compare readback semantics while preserving existing raw receipt hashes."""
+    """Compare fields SimpliFi writes while preserving existing raw receipt hashes."""
     if not isinstance(actual, dict) or not isinstance(recorded, dict):
         return False
     if not isinstance(receipt, str) or policy_fingerprint(recorded) != receipt:
         return False
-    return fingerprint(_comparison_fields(actual)) == fingerprint(_comparison_fields(recorded))
+    return not policy_difference(actual, recorded)

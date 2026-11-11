@@ -144,7 +144,10 @@ async def test_known_id_update_recovery_is_readback_only_and_external_drift_is_v
     assert not (await command(engine, "preview_recovery"))["operations"]
     key = next(iter(gateway.policies))
     gateway.policies[key]["name"] = "Externally changed"
-    assert (await command(engine, "preview_recovery"))["drift"][0]["policy_id"] == key
+    drift = (await command(engine, "preview_recovery"))["drift"][0]
+    assert drift["policy_id"] == key
+    assert drift["fields"] == ["name"]
+    assert "Externally changed" not in drift["message"]
 
 
 async def test_recovery_replans_current_intent_and_rejects_prior_revision(household):
