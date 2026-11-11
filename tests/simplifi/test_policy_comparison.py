@@ -6,10 +6,12 @@ import pytest
 
 from custom_components.simplifi.planner import (
     format_policy_mismatch,
+    non_owned_policy_fields,
     policy_difference,
     policy_fingerprint,
     policy_matches,
     policy_mismatch_fields,
+    replacement_body,
 )
 
 
@@ -128,6 +130,53 @@ def test_weekday_order_still_matches_and_wrong_receipt_names_the_receipt():
         "THURSDAY",
         "FRIDAY",
     ]
+
+
+def test_nested_null_is_not_the_same_as_a_missing_key():
+    stored = pre_11_policy()
+    live = deepcopy(stored)
+    live["schedule"]["optional"] = None
+    assert policy_difference(live, stored) == ["schedule.optional"]
+    absent = deepcopy(stored)
+    del absent["schedule"]["timeFilter"]
+    assert "schedule.timeFilter" in policy_difference(stored, absent)
+    without_schedule = pre_11_policy()
+    del without_schedule["schedule"]
+    null_schedule = deepcopy(without_schedule)
+    null_schedule["schedule"] = None
+    assert policy_matches(null_schedule, without_schedule, policy_fingerprint(without_schedule))
+
+
+@pytest.mark.parametrize("report_flow", [False, True])
+def test_replacement_body_overlays_owned_fields_and_keeps_server_keys(report_flow):
+    current = live_from(
+        pre_11_policy(),
+        reportFlowEnabled=report_flow,
+        futureFlag="keep-me",
+        index=9,
+        metadata={"origin": "USER_DEFINED"},
+    )
+    owned = pre_11_policy()
+    owned["enabled"] = False
+    del owned["schedule"]
+    original = deepcopy(current)
+    replaced = replacement_body(current, owned)
+    assert replaced["reportFlowEnabled"] is report_flow
+    assert replaced["futureFlag"] == "keep-me"
+    assert replaced["index"] == 9 and replaced["metadata"]["origin"] == "USER_DEFINED"
+    assert replaced["enabled"] is False and "schedule" not in replaced
+    assert replaced["id"] == current["id"]
+    assert current == original
+    ignored, unknown = non_owned_policy_fields(current)
+    assert ignored == ["futureFlag", "id", "index", "metadata", "reportFlowEnabled"]
+    assert unknown == ["futureFlag"]
+    assert "keep-me" not in str(ignored) and "02:00:00:00:00:01" not in str(ignored)
+    current["weird key"] = "secret-value"
+    ignored, unknown = non_owned_policy_fields(current)
+    assert "unrecognized" in ignored and "unrecognized" in unknown
+    assert "secret-value" not in str((ignored, unknown)) and "weird key" not in str(
+        (ignored, unknown)
+    )
 
 
 def test_difference_paths_omit_values_and_are_capped():

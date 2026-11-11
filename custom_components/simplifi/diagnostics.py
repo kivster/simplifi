@@ -46,6 +46,10 @@ async def async_get_config_entry_diagnostics(hass, entry):
             if j["status"] != "verified"
         ],
         "issue": state.issue,
+        "ignored_policy_fields": list(getattr(engine.reconciler, "ignored_policy_fields", [])),
+        "unrecognized_policy_fields": list(
+            getattr(engine.reconciler, "unrecognized_policy_fields", [])
+        ),
         "controller_requests": health["requests"],
         "device_health": {
             k: health[k]

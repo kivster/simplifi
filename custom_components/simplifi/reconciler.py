@@ -6,7 +6,13 @@ from datetime import datetime
 from typing import Protocol
 
 from .models import Conflict, SimpliFiError, State, uid
-from .planner import policy_fingerprint, policy_matches, policy_mismatch_fields
+from .planner import (
+    non_owned_policy_fields,
+    policy_fingerprint,
+    policy_matches,
+    policy_mismatch_fields,
+    replacement_body,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -26,6 +32,8 @@ class Reconciler:
         self.gateway = gateway
         self.save = save
         self.check_active = check_active
+        self.ignored_policy_fields: list[str] = []
+        self.unrecognized_policy_fields: list[str] = []
 
     async def apply(self, state: State, desired: dict[str, dict], now: datetime) -> None:
         if (state.controller, state.site) != (self.gateway.controller, self.gateway.site):
@@ -65,14 +73,35 @@ class Reconciler:
                 raise Conflict("Unresolved write or readback mismatch; writer frozen")
             await self.save(state)
         mismatched: list[str] = []
+        seen: set[str] = set()
+        ignored_all: set[str] = set()
+        unknown_all: set[str] = set()
         for record in state.owned.values():
             if (record["controller"], record["site"]) != (state.controller, state.site):
                 raise Conflict("Owned-policy record belongs to another controller")
             current = actual.get(record["id"])
+            if current and record["id"] not in seen:
+                # One info line per policy per reconcile. Names only; values stay out.
+                seen.add(record["id"])
+                ignored, unknown = non_owned_policy_fields(current)
+                if ignored:
+                    _LOGGER.info(
+                        "SimpliFi ignored non-owned policy fields: %s",
+                        ", ".join(ignored),
+                    )
+                if unknown:
+                    _LOGGER.warning(
+                        "SimpliFi ignored unrecognized policy fields: %s",
+                        ", ".join(unknown),
+                    )
+                ignored_all.update(ignored)
+                unknown_all.update(unknown)
             if current and not policy_matches(current, record["body"], record["fingerprint"]):
                 mismatched.extend(
                     policy_mismatch_fields(current, record["body"], record["fingerprint"])
                 )
+        self.ignored_policy_fields = sorted(ignored_all)
+        self.unrecognized_policy_fields = sorted(unknown_all)
         if mismatched:
             detail = "differing fields: " + ", ".join(sorted(set(mismatched)))
             _LOGGER.warning(
@@ -122,6 +151,9 @@ class Reconciler:
                     if action == "create"
                     else {**body, "description": current.get("description", "") if current else ""}
                 )
+                if action == "update" and current:
+                    # PUT replaces the policy, so start from the live object.
+                    body = replacement_body(current, body)
                 operation["fingerprint"] = policy_fingerprint(body)
                 operation["body"] = body
             state.journal.append(operation)

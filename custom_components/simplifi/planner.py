@@ -1,5 +1,6 @@
 """Explicit network scope for every policy; group rules additionally require a MAC."""
 
+from copy import deepcopy
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -304,6 +305,52 @@ OWNED_POLICY_FIELDS = frozenset(
     }
 )
 _MAX_DIFFERENCE_PATHS = 12
+# Server keys that are not edits. reportFlowEnabled arrived in Network 11.0.89.
+# id, index and metadata have always been assigned by the controller.
+KNOWN_SERVER_POLICY_FIELDS = (
+    "reportFlowEnabled",
+    "id",
+    "index",
+    "metadata",
+)
+_KNOWN_SERVER_POLICY_FIELDS = frozenset(KNOWN_SERVER_POLICY_FIELDS)
+
+
+def replacement_body(current: dict, owned: dict) -> dict:
+    """Live policy with the fields SimpliFi writes overlaid.
+
+    UniFi PUT replaces the policy. Copying the live object first keeps
+    server-added keys such as reportFlowEnabled. Owned keys absent from the
+    desired body are removed, so an old schedule is not left behind.
+    """
+    body = deepcopy(current)
+    for key in OWNED_POLICY_FIELDS:
+        if key in owned:
+            body[key] = deepcopy(owned[key])
+        else:
+            body.pop(key, None)
+    return body
+
+
+def non_owned_policy_fields(policy: dict) -> tuple[list[str], list[str]]:
+    """Deduplicated safe names of ignored top-level keys, then the unknown subset.
+
+    Values are never included. A key that is not a plain identifier is reported
+    as ``unrecognized`` so the log cannot carry an arbitrary string.
+    """
+    ignored: list[str] = []
+    unknown: list[str] = []
+    for key in policy:
+        if key in OWNED_POLICY_FIELDS:
+            continue
+        label = _field_label(key)
+        if label not in ignored:
+            ignored.append(label)
+        if key not in _KNOWN_SERVER_POLICY_FIELDS and label not in unknown:
+            unknown.append(label)
+    ignored.sort()
+    unknown.sort()
+    return ignored, unknown
 
 
 def policy_fingerprint(policy: dict) -> str:
@@ -339,15 +386,19 @@ def _field_label(key: object) -> str:
 
 
 def _diff_paths(left: Any, right: Any, prefix: str) -> list[str]:
-    if left == right:
-        return []
     if isinstance(left, dict) and isinstance(right, dict):
         paths: list[str] = []
         for key in set(left) | set(right):
             label = _field_label(key)
             child = f"{prefix}.{label}" if prefix else label
-            paths.extend(_diff_paths(left.get(key), right.get(key), child))
+            # Missing is not the same as an explicit null. .get() would hide that.
+            if key not in left or key not in right:
+                paths.append(child)
+                continue
+            paths.extend(_diff_paths(left[key], right[key], child))
         return paths
+    if left == right:
+        return []
     # Lists stay at the field path so domain names and weekdays are not logged.
     return [prefix or "owned fields"]
 

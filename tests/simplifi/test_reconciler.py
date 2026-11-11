@@ -186,3 +186,48 @@ async def test_unifi_11_report_flow_is_not_drift_but_owned_edits_are(
     assert row["fields"] == [path]
     assert hidden not in row["message"] and "reportFlowEnabled" not in row["fields"]
     assert len(drift["drift"]) == 1
+
+
+@pytest.mark.parametrize("report_flow", [False, True])
+async def test_owned_update_preserves_report_flow_and_unknown_keys(household, caplog, report_flow):
+    engine, gateway, _, _ = household
+    engine.state.rules["bedtime"] = Rule(
+        "bedtime",
+        "Weekend bedtime",
+        "internet",
+        groups=["child"],
+        windows=[Window("weekend", "Weekend nights", [4, 5], "22:00", "08:00", overnight=True)],
+    )
+    await command(engine, "set_management", enabled=True, gateway_timezone_confirmed=True)
+    await engine.refresh()
+    for policy in gateway.policies.values():
+        policy["reportFlowEnabled"] = report_flow
+        policy["futureFlag"] = "keep-me"
+    sent = []
+    update = gateway.update
+
+    async def capture(policy_id, body):
+        sent.append(deepcopy(body))
+        return await update(policy_id, body)
+
+    gateway.update = capture
+    caplog.set_level("INFO")
+    await engine.refresh()
+    assert sent == [] and engine.state.sync_status == "applied" and engine.state.issue is None
+    notes = [r for r in caplog.records if r.message.startswith("SimpliFi ignored non-owned")]
+    warnings = [r for r in caplog.records if r.message.startswith("SimpliFi ignored unrecognized")]
+    assert len(notes) == len(gateway.policies)
+    assert len(warnings) == len(gateway.policies)
+    assert all("futureFlag" in r.message and "keep-me" not in r.message for r in warnings)
+    assert all("reportFlowEnabled" not in r.message for r in warnings)
+    assert "keep-me" not in caplog.text
+    assert engine.reconciler.unrecognized_policy_fields == ["futureFlag"]
+    await command(engine, "set_rule_enabled", rule_id="bedtime", enabled=False)
+    await engine.refresh()
+    assert sent and engine.state.sync_status == "applied"
+    for body in sent:
+        assert body["reportFlowEnabled"] is report_flow and body["futureFlag"] == "keep-me"
+        assert body["enabled"] is False
+    for policy in gateway.policies.values():
+        assert policy["reportFlowEnabled"] is report_flow and policy["futureFlag"] == "keep-me"
+        assert policy["enabled"] is False
