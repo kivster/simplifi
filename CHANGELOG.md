@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.22.3b1 — 2026-11-11
+
+- Compare owned firewall policies by the fields SimpliFi writes. UniFi Network 11.0.89 and later add `reportFlowEnabled` on readback; that server-added key is not an external edit, so reconcile no longer refuses to overwrite every owned policy after the controller update.
+- Keep refusing when a written field changes, including schedule and action. Drift diagnostics and logs name the differing field paths and omit policy values. Existing ownership receipts are unchanged.
+
 ## 0.22.2b1 — 2026-10-25
 
 - Replace the exact UniFi version gate with runtime API contract checks. Unknown application versions remain usable when required API responses pass validation.

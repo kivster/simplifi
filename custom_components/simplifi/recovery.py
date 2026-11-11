@@ -1,11 +1,14 @@
 """Read-only recovery evidence and explicit administrator resolution of uncertain writes."""
 
+import logging
 from copy import deepcopy
 from datetime import timedelta
 
 from .models import Conflict, SimpliFiError, fingerprint, instant
-from .planner import policy_matches
+from .planner import policy_matches, policy_mismatch_fields
 from .reconciler import Reconciler
+
+_LOGGER = logging.getLogger(__name__)
 
 
 def operation_for(state, operation_id):
@@ -81,15 +84,31 @@ async def preview(state, gateway, actor, now, operation_id=None):
         if operation_id
         else [j for j in state.journal if j["status"] != "verified"]
     )
-    drift = [
-        {
-            "key": key,
-            "policy_id": r["id"],
-            "message": "Owned policy was edited externally. Review it in UniFi; recovery will not overwrite it.",
-        }
-        for key, r in state.owned.items()
-        if r["id"] in actual and not policy_matches(actual[r["id"]], r["body"], r["fingerprint"])
-    ]
+    drift = []
+    for key, record in state.owned.items():
+        if record["id"] not in actual or policy_matches(
+            actual[record["id"]], record["body"], record["fingerprint"]
+        ):
+            continue
+        fields = policy_mismatch_fields(actual[record["id"]], record["body"], record["fingerprint"])
+        drift.append(
+            {
+                "key": key,
+                "policy_id": record["id"],
+                "fields": fields,
+                "message": (
+                    "Owned policy was edited externally. Review it in UniFi; "
+                    "recovery will not overwrite it. Differing fields: " + ", ".join(fields)
+                ),
+            }
+        )
+    if drift:
+        names = sorted({field for row in drift for field in row["fields"]})
+        _LOGGER.warning(
+            "SimpliFi owned-policy drift on %d policies (differing fields: %s)",
+            len(drift),
+            ", ".join(names),
+        )
     return {
         "revision": state.revision,
         "operations": [evidence(state, j, actual, actor, now) for j in operations],

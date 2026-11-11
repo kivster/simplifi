@@ -1,10 +1,10 @@
-# Release status — 0.22.2b1
+# Release status — 0.22.3b1
 
 SimpliFi is a beta custom integration for Home Assistant. Install it as a custom HACS repository or manually; it is not included in HACS's default catalogue.
 
 ## Gateway compatibility
 
-Version 0.22.2b1 checks the API responses needed for each operation instead of rejecting unfamiliar application version numbers. Tested versions are informational. Required site, network, client and policy reads are validated before automated policy writes. Optional catalogues can be unavailable without stopping independent internet controls; a saved rule depending on a missing catalogue pauses the shared policy plan, preserving its existing policies.
+Version 0.22.3b1 compares an owned firewall policy with the fields SimpliFi writes. UniFi Network 11 readback can include `reportFlowEnabled` without freezing reconcile; a change to a written field still refuses overwrite and names the differing fields. Version 0.22.2b1 checks the API responses needed for each operation instead of rejecting unfamiliar application version numbers. Tested versions are informational. Required site, network, client and policy reads are validated before automated policy writes. Optional catalogues can be unavailable without stopping independent internet controls; a saved rule depending on a missing catalogue pauses the shared policy plan, preserving its existing policies.
 
 Saved settings, diagnostics and the dashboard remain loaded during transient or compatibility failures. Automatic polling recovers after valid reads resume. API-key rejection starts native reauthentication, which preserves controller/site binding and household intent.
 

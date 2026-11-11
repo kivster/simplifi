@@ -1,11 +1,14 @@
 """Single-owner durable write journal. Call only under the engine's shared lock."""
 
+import logging
 from copy import deepcopy
 from datetime import datetime
 from typing import Protocol
 
 from .models import Conflict, SimpliFiError, State, uid
-from .planner import policy_fingerprint, policy_matches
+from .planner import policy_fingerprint, policy_matches, policy_mismatch_fields
+
+_LOGGER = logging.getLogger(__name__)
 
 
 class Gateway(Protocol):
@@ -61,12 +64,22 @@ class Reconciler:
             else:
                 raise Conflict("Unresolved write or readback mismatch; writer frozen")
             await self.save(state)
+        mismatched: list[str] = []
         for record in state.owned.values():
             if (record["controller"], record["site"]) != (state.controller, state.site):
                 raise Conflict("Owned-policy record belongs to another controller")
             current = actual.get(record["id"])
             if current and not policy_matches(current, record["body"], record["fingerprint"]):
-                raise Conflict("Owned policy was edited externally; refusing to overwrite")
+                mismatched.extend(
+                    policy_mismatch_fields(current, record["body"], record["fingerprint"])
+                )
+        if mismatched:
+            detail = "differing fields: " + ", ".join(sorted(set(mismatched)))
+            _LOGGER.warning(
+                "SimpliFi owned policy was edited externally; refusing to overwrite (%s)",
+                detail,
+            )
+            raise Conflict(f"Owned policy was edited externally; refusing to overwrite ({detail})")
         state.sync_status = "applying"
         await self.save(state)
         for key in sorted(set(state.owned) | set(desired)):

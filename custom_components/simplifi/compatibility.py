@@ -62,9 +62,10 @@ def validate_catalogue(rows):
 
 def validate_policy(row):
     # Foreign policies may use selectors SimpliFi never writes. Validate their
-    # shared envelope, then retain unknown fields for strict ownership/readback
-    # comparison. An unfamiliar semantic field on an owned policy must not be
-    # silently dropped by PUT or treated as proof of the requested policy.
+    # shared envelope and retain unknown fields on the read model. Ownership
+    # comparison uses the fields SimpliFi writes, so a server-added key is not
+    # an external edit. A nested change inside a written field still fails
+    # readback and is not treated as proof of the requested policy.
     require(
         identity(row.get("id"))
         and isinstance(row.get("name"), str)

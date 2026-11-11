@@ -5,7 +5,7 @@ from datetime import timedelta
 
 import pytest
 
-from custom_components.simplifi.models import Conflict, SimpliFiError, State
+from custom_components.simplifi.models import Conflict, Rule, SimpliFiError, State, Window
 from custom_components.simplifi.planner import plan
 
 from .conftest import command
@@ -58,9 +58,10 @@ async def test_external_edit_freezes_writer(household):
     first = next(iter(engine.state.owned.values()))["id"]
     gateway.policies[first]["enabled"] = False
     snapshot = deepcopy(gateway.policies)
-    with pytest.raises(Conflict):
+    with pytest.raises(Conflict, match=r"differing fields: enabled"):
         await engine.refresh()
     assert gateway.policies == snapshot
+    assert "differing fields: enabled" in (engine.state.issue or "")
 
 
 async def test_partial_read_never_mass_deletes(household):
@@ -129,3 +130,59 @@ async def test_policy_uses_network_and_mac_not_shared_zone_only(household):
         assert source["macAddressFilter"] in {d.mac for d in engine.state.devices.values()}
         assert body["destination"]["zoneId"] == gateway.external_zone
         assert body["ipProtocolScope"]["ipVersion"] == "IPV4_AND_IPV6"
+
+
+def _set_action(policy):
+    policy["action"] = {"type": "ALLOW"}
+
+
+def _set_schedule(policy):
+    policy["schedule"]["timeFilter"]["startTime"] = "21:00"
+
+
+@pytest.mark.parametrize(
+    "mutate,path,hidden",
+    [
+        (_set_action, "action.type", "ALLOW"),
+        (_set_schedule, "schedule.timeFilter.startTime", "21:00"),
+    ],
+)
+async def test_unifi_11_report_flow_is_not_drift_but_owned_edits_are(
+    household, caplog, mutate, path, hidden
+):
+    engine, gateway, _, _ = household
+    engine.state.rules["bedtime"] = Rule(
+        "bedtime",
+        "Weekend bedtime",
+        "internet",
+        groups=["child"],
+        windows=[Window("weekend", "Weekend nights", [4, 5], "22:00", "08:00", overnight=True)],
+    )
+    await command(engine, "set_management", enabled=True, gateway_timezone_confirmed=True)
+    await engine.refresh()
+    assert engine.state.sync_status == "applied" and engine.state.owned
+    owned = deepcopy(engine.state.owned)
+    for value in (False, True):
+        for policy in gateway.policies.values():
+            policy["reportFlowEnabled"] = value
+        live = deepcopy(gateway.policies)
+        await engine.refresh()
+        assert engine.state.sync_status == "applied" and engine.state.issue is None
+        assert engine.state.owned == owned and gateway.policies == live
+    policy_id = next(iter(gateway.policies))
+    mutate(gateway.policies[policy_id])
+    live = deepcopy(gateway.policies)
+    caplog.set_level("WARNING")
+    with pytest.raises(Conflict) as caught:
+        await engine.refresh()
+    assert f"differing fields: {path}" in str(caught.value)
+    assert gateway.policies == live
+    assert path in (engine.state.issue or "")
+    assert hidden not in (engine.state.issue or "")
+    assert "reportFlowEnabled" not in (engine.state.issue or "")
+    assert path in caplog.text and hidden not in caplog.text
+    drift = await command(engine, "preview_recovery")
+    row = next(item for item in drift["drift"] if item["policy_id"] == policy_id)
+    assert row["fields"] == [path]
+    assert hidden not in row["message"] and "reportFlowEnabled" not in row["fields"]
+    assert len(drift["drift"]) == 1

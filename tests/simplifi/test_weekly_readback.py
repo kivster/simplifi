@@ -117,7 +117,6 @@ def test_weekday_equivalence_does_not_change_raw_receipts_or_input():
         ("source", {"zoneId": "home", "macAddressFilter": "02:00:00:00:00:02"}),
         ("destination", {"zoneId": "other"}),
         ("description", "other operation"),
-        ("unexpected", [2, 1]),
     ],
 )
 def test_other_policy_fields_remain_strict(field, value):
